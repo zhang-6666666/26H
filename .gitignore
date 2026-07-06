@@ -1,0 +1,18 @@
+# 编译输出
+build/
+_build/
+b/
+build2/
+*.o
+*.obj
+*.elf
+*.hex
+*.bin
+*.map
+*.d
+
+# IDE 临时文件
+mx.scratch
+
+# 保留 .settings（CubeMX 项目配置）
+!.settings
