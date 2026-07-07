@@ -29,7 +29,7 @@
 #include "jy901p.h"
 #include "wit_c_sdk.h"
 #include "motor.h"
-#include "oled.h"
+#include "task.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -105,6 +105,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
+  MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
   /* JY901P初始化（DMA+SDK） */
@@ -116,6 +117,10 @@ int main(void)
   /* 电机初始化（TIM1 PWM 已在 MX_TIM1_Init 中配置完毕） */
   motor_init(&htim1);
   printf("Motor init done\r\n");
+
+  /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
+  task_init();
+  printf("System ready\r\n");
 
   // /* OLED 初始化 */
   // oled_init(&hi2c1);
@@ -130,34 +135,8 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    /* DMA→环形缓冲→SDK→角度就绪时直接取格式化字符串 */
     jy901p_poll();
-
-
-    if (jy901p_angle_ready())
-    {
-        printf("%s\r\n", jy901p_angle_str());
-    }
-
-    /* ---- 电机测试：正转 2s → 刹车 1s → 反转 2s → 刹车 1s ---- */
-    static uint32_t tick = 0;
-    tick++;
-    if (tick < 200) {                /*  0~2s: 正转 50% */
-        motor_a_run(200);
-        motor_b_run(200);
-    } else if (tick < 300) {         /*  2~3s: 刹车 */
-        motor_a_brake();
-        motor_b_brake();
-    } else if (tick < 500) {         /*  3~5s: 反转 50% */
-        motor_a_run(-200);
-        motor_b_run(-200);
-    } else if (tick < 600) {         /*  5~6s: 刹车 */
-        motor_a_brake();
-        motor_b_brake();
-    } else {                         /*  6s: 重置循环 */
-        tick = 0;
-    }
-    HAL_Delay(10);
+    task_poll();
   }
   /* USER CODE END 3 */
 }

@@ -49,7 +49,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/RINGBUF/ringbuf.c
     App/JY901P/jy901p.c
     App/MOTOR/motor.c
-    App/OLED/oled.c
+    App/TASK/task.c
 )
 
 # Add include paths
@@ -60,6 +60,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/JY901P
     App/MOTOR
     App/OLED
+    App/TASK
 )
 
 # Add project symbols (macros)
