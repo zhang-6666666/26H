@@ -19,12 +19,17 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "dma.h"
+#include "i2c.h"
+#include "tim.h"
 #include "usart.h"
 #include "gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "jy901p.h"
 #include "wit_c_sdk.h"
+#include "motor.h"
+#include "oled.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -64,30 +69,6 @@ int __io_putchar(int ch)
     HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 10);
     return ch;
 }
-
-/* ---- JY901P 角度读取 ---- */
-
-/* 收到新角度数据时 SDK 回调置 1，主循环检测后清零 */
-volatile uint8_t angle_data_ready = 0;
-
-/* SDK 需要发数据给传感器时调用，通过 USART2 发出 */
-static void SensorUartSend(uint8_t *p_data, uint32_t len)
-{
-    HAL_UART_Transmit(&huart2, p_data, len, 10);
-}
-
-/* SDK 需要延时等待时调用 */
-static void DelayMs(uint16_t ms)
-{
-    HAL_Delay(ms);
-}
-
-/* SDK 每收到一个完整数据包时回调，通知我们更新了哪些寄存器 */
-static void SensorDataUpdate(uint32_t uiReg, uint32_t uiRegNum)
-{
-    /* 只有收到角度寄存器 (Roll=0x3d) 时才标记有效 */
-    if (uiReg == Roll) angle_data_ready = 1;
-}
 /* USER CODE END 0 */
 
 /**
@@ -122,18 +103,23 @@ int main(void)
   MX_DMA_Init();
   MX_USART1_UART_Init();
   MX_USART2_UART_Init();
+  MX_TIM1_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
-  /* ---- JY901P SDK 初始化 ---- */
-  /* 1. 选择正常协议 (WIT_PROTOCOL_NORMAL)，传感器地址 0x50 */
-  WitInit(WIT_PROTOCOL_NORMAL, 0x50);
-  /* 2. 注册发送函数：SDK 需要写传感器时，调 SensorUartSend → USART2 */
-  WitSerialWriteRegister(SensorUartSend);
-  /* 3. 注册数据回调：SDK 收到完整包时，调 SensorDataUpdate 通知我们 */
-  WitRegisterCallBack(SensorDataUpdate);
-  /* 4. 注册延时函数：SDK 写寄存器后需要等待，用 HAL_Delay */
-  WitDelayMsRegister(DelayMs);
+
+  /* JY901P初始化（DMA+SDK） */
+  jy901p_init(&huart2, &hdma_usart2_rx);
+  /* 传感器配置：只输出角度，提高数据刷新率 */
+  WitSetContent(RSW_ANGLE);
   printf("JY901P init done\r\n");
 
+  /* 电机初始化（TIM1 PWM 已在 MX_TIM1_Init 中配置完毕） */
+  motor_init(&htim1);
+  printf("Motor init done\r\n");
+
+  // /* OLED 初始化 */
+  // oled_init(&hi2c1);
+  // oled_show_string(1, "JY901P Ready");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -144,31 +130,34 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
 
-    /* 将 SDK 最新收到的原始数据包写入 sReg[] 寄存器表 */
-    CopeWitData(ucRegIndex, usRegDataBuff, uiRegDataLen);
+    /* DMA→环形缓冲→SDK→角度就绪时直接取格式化字符串 */
+    jy901p_poll();
 
-    /* 角度数据就绪：从 sReg[] 取出 Roll/Pitch/Yaw，整数运算避免浮点 */
-    if (angle_data_ready)
+
+    if (jy901p_angle_ready())
     {
-        angle_data_ready = 0;
-
-        /* raw × 1800 / 32768 = 角度 × 10（例：raw=-334 → -18 → -1.8°） */
-        int32_t r10 = (int32_t)sReg[Roll]  * 1800 / 32768;
-        int32_t p10 = (int32_t)sReg[Pitch] * 1800 / 32768;
-        int32_t y10 = (int32_t)sReg[Yaw]   * 1800 / 32768;
-
-        /* 处理负数：拆成符号 + 绝对值，方便 %d.%d 打印 */
-        int rs = r10 < 0, ra = rs ? -r10 : r10;   /* rs=1为负 */
-        int ps = p10 < 0, pa = ps ? -p10 : p10;
-        int ys = y10 < 0, ya = ys ? -y10 : y10;
-
-        printf("Roll=%c%d.%d Pitch=%c%d.%d Yaw=%c%d.%d\r\n",
-               rs ? '-' : ' ', ra / 10, ra % 10,   /* 例: -1.8 */
-               ps ? '-' : ' ', pa / 10, pa % 10,
-               ys ? '-' : ' ', ya / 10, ya % 10);
+        printf("%s\r\n", jy901p_angle_str());
     }
 
-    HAL_Delay(100);
+    /* ---- 电机测试：正转 2s → 刹车 1s → 反转 2s → 刹车 1s ---- */
+    static uint32_t tick = 0;
+    tick++;
+    if (tick < 200) {                /*  0~2s: 正转 50% */
+        motor_a_run(200);
+        motor_b_run(200);
+    } else if (tick < 300) {         /*  2~3s: 刹车 */
+        motor_a_brake();
+        motor_b_brake();
+    } else if (tick < 500) {         /*  3~5s: 反转 50% */
+        motor_a_run(-200);
+        motor_b_run(-200);
+    } else if (tick < 600) {         /*  5~6s: 刹车 */
+        motor_a_brake();
+        motor_b_brake();
+    } else {                         /*  6s: 重置循环 */
+        tick = 0;
+    }
+    HAL_Delay(10);
   }
   /* USER CODE END 3 */
 }

@@ -21,10 +21,7 @@
 #include "usart.h"
 
 /* USER CODE BEGIN 0 */
-#include "wit_c_sdk.h"
-
-/* USART2 中断接收缓冲区，每次收到 1 字节即触发 RxCpltCallback */
-volatile uint8_t rx_byte;
+#include "jy901p.h"
 /* USER CODE END 0 */
 
 UART_HandleTypeDef huart1;
@@ -44,7 +41,7 @@ void MX_USART1_UART_Init(void)
 
   /* USER CODE END USART1_Init 1 */
   huart1.Instance = USART1;
-  huart1.Init.BaudRate = 9600;
+  huart1.Init.BaudRate = 115200;
   huart1.Init.WordLength = UART_WORDLENGTH_8B;
   huart1.Init.StopBits = UART_STOPBITS_1;
   huart1.Init.Parity = UART_PARITY_NONE;
@@ -85,8 +82,7 @@ void MX_USART2_UART_Init(void)
     Error_Handler();
   }
   /* USER CODE BEGIN USART2_Init 2 */
-  /* 启动 USART2 单字节中断接收，每收到 1 字节触发一次 HAL_UART_RxCpltCallback */
-  HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
+  
   /* USER CODE END USART2_Init 2 */
 
 }
@@ -223,15 +219,4 @@ void HAL_UART_MspDeInit(UART_HandleTypeDef* uartHandle)
 }
 
 /* USER CODE BEGIN 1 */
-/* USART 接收完成回调：HAL_UART_Receive_IT 收到 1 字节后自动调用 */
-void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
-{
-    if (huart->Instance == USART2)
-    {
-        /* 把收到的字节喂给 SDK 的状态机，让它在后台攒数据包 */
-        WitSerialDataIn(rx_byte);
-        /* 重新启动下一次单字节接收，形成"收到→处理→再等下一字节"的循环 */
-        HAL_UART_Receive_IT(&huart2, (uint8_t *)&rx_byte, 1);
-    }
-}
 /* USER CODE END 1 */

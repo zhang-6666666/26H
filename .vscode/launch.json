@@ -20,13 +20,24 @@
         },
 
         {
-            "name": "Cortex Debug",
+            "name": "DAP_link",
             "cwd": "${workspaceFolder}",
-            "executable": "./bin/executable.elf",
+            "executable": "build/Debug/JY901P.elf",
             "request": "launch",
             "type": "cortex-debug",
+            "servertype": "openocd",
+            "configFiles": [
+                "interface/cmsis-dap.cfg",
+                "target/stm32f1x.cfg"
+            ],
+            "serverpath": "D:/openocd/xpack/xpack-openocd-0.12.0-2/bin/openocd.exe",
+            "searchDir": [
+                "D:/openocd/xpack/xpack-openocd-0.12.0-2/openocd/scripts"
+            ],
             "runToEntryPoint": "main",
-            "servertype": "jlink"
-        }
+            "showDevDebugOutput": "none",
+            "gdbPath": "C:/Users/1/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gdb.exe"
+
+        },
     ]
 }
