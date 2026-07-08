@@ -16,14 +16,7 @@ void jy901p_uart_isr(UART_HandleTypeDef *huart);
 /* 主循环轮询：从环形缓冲取字节喂 SDK，检测是否有新角度 */
 void jy901p_poll(void);
 
-/* 返回非 0 表示有新角度数据就绪 */
-uint8_t jy901p_angle_ready(void);
-
-/* 取角度并直接返回格式化字符串（×10 整数，避免 printf 浮点）
-   例: "Roll=-1.8 Pitch=+0.7 Yaw=132.9" */
-const char *jy901p_angle_str(void);
-
-/* 读取角度（×10 整数，避免 printf 浮点） */
-void jy901p_read_angle(int32_t *roll_10, int32_t *pitch_10, int32_t *yaw_10);
+/* 角度数据（SDK 回调直接写入，外部只读） */
+extern float angle_r, angle_p, angle_y;
 
 #endif

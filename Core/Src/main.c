@@ -29,6 +29,7 @@
 #include "jy901p.h"
 #include "wit_c_sdk.h"
 #include "motor.h"
+#include "encoder.h"
 #include "task.h"
 /* USER CODE END Includes */
 
@@ -106,6 +107,8 @@ int main(void)
   MX_TIM1_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
+  MX_TIM3_Init();
+  MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
   /* JY901P初始化（DMA+SDK） */
@@ -120,8 +123,10 @@ int main(void)
 
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
-  printf("System ready\r\n");
 
+  /* 编码器初始化（硬件正交解码，TIM2+4） */
+  encoder_init();
+  printf("System ready\r\n");
   // /* OLED 初始化 */
   // oled_init(&hi2c1);
   // oled_show_string(1, "JY901P Ready");
@@ -134,7 +139,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
     jy901p_poll();
     task_poll();
   }

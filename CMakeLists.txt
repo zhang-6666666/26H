@@ -50,6 +50,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/JY901P/jy901p.c
     App/MOTOR/motor.c
     App/TASK/task.c
+    App/ENCODER/encoder.c
+    App/PID/pid.c
 )
 
 # Add include paths
@@ -61,6 +63,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/MOTOR
     App/OLED
     App/TASK
+    App/ENCODER
+    App/PID
 )
 
 # Add project symbols (macros)
@@ -74,6 +78,8 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 # Add linked libraries
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
+    -Wl,-u,_printf_float     # ← 加这行，强制链接浮点 printf
 
     # Add user defined libraries
 )
+
