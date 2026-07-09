@@ -36,7 +36,11 @@
             ],
             "runToEntryPoint": "main",
             "showDevDebugOutput": "none",
-            "gdbPath": "C:/Users/1/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gdb.exe"
+            "gdbPath": "C:/Users/1/AppData/Local/stm32cube/bundles/gnu-tools-for-stm32/14.3.1+st.2/bin/arm-none-eabi-gdb.exe",
+            "liveWatch": {
+                "enabled": true,
+                "samplesPerSecond": 4
+            }
 
         },
     ]

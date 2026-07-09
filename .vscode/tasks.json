@@ -31,8 +31,20 @@
             "group": {
                 "kind": "test",
                 "isDefault": true
-            },
-            "dependsOn": ["build"]
+            }
+        },
+        {
+            "label": "build & flash",
+            "dependsOn": [
+                "build",
+                "flash"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
         }
     ]
 }

@@ -1,18 +1,37 @@
-/* 编码器读取 — 硬件 TIM 编码器模式，零中断，直接读 CNT */
-#ifndef ENCODER_H
-#define ENCODER_H
+#ifndef __ENCODER_DRIVER_H__
+#define __ENCODER_DRIVER_H__
 
-#include <stdint.h>
+#include "main.h"
 
-/* 初始化：启动 TIM2/TIM4 编码器模式计数 */
-void encoder_init(void);
+// --- 用户需要根据实际情况修改这里的宏定义 ---
+// 编码器每转一圈的脉冲数 (PPR)
+#define ENCODER_PPR (1060) // 13线/相, 20倍减速比, 4倍频
+// 车轮直径 (单位: 厘米)
+#define WHEEL_DIAMETER_CM 4.8f
+// --- 修改结束 ---
 
-/* 读取编码器原始计数值（4 倍频） */
-int32_t encoder_a_get(void);
-int32_t encoder_b_get(void);
+// 自动计算周长和采样时间
+#define PI 3.14159265f
+#define WHEEL_CIRCUMFERENCE_CM (WHEEL_DIAMETER_CM * PI)
+#define SAMPLING_TIME_S 0.050f // 采样时间
 
-/* 清零计数值 */
-void encoder_a_reset(void);
-void encoder_b_reset(void);
+/**
+ * @brief 编码器数据结构体
+ */
+typedef struct
+{
+  TIM_HandleTypeDef *htim; // 定时器
+  unsigned char reverse; // 编码器的方向是否反转。0-正常，1-反转
+  int16_t count;          // 当前采样周期内的原始计数值
+  int32_t total_count;    // 累计总计数值
+  float speed_cm_s;     // 计算出的速度 (cm/s)
+} Encoder;
+
+void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef *htim, unsigned char reverse);
+void Encoder_Update(Encoder* encoder);
+
+extern Encoder left_encoder;
+extern Encoder right_encoder;
+
 
 #endif

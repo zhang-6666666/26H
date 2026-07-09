@@ -16,6 +16,12 @@ void jy901p_uart_isr(UART_HandleTypeDef *huart);
 /* 主循环轮询：从环形缓冲取字节喂 SDK，检测是否有新角度 */
 void jy901p_poll(void);
 
+/* 切换到6轴算法（加速度+陀螺仪），保存到传感器 Flash，永久生效 */
+void jy901p_set_6axis(void);
+
+/* 将当前角度归零（记录当前角度为参考点，此后 angle_* 输出相对角度） */
+void jy901p_zero(void);
+
 /* 角度数据（SDK 回调直接写入，外部只读） */
 extern float angle_r, angle_p, angle_y;
 

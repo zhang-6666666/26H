@@ -24,6 +24,9 @@ static uint8_t   rb_buf[RB_BUF_SIZE];
 /* 角度数据 */
 float  angle_r, angle_p, angle_y;        /* 角度 float，SDK 回调写入 */
 
+/* 归零偏移 */
+static float offset_r, offset_p, offset_y;
+
 
 /* =================== SDK 回调（内部函数） =================== */
 
@@ -48,7 +51,9 @@ static void sensor_data_update(uint32_t uiReg, uint32_t uiRegNum)
         float p = (float)sReg[Pitch] * 180.0f / 32768.0f;
         float y = (float)sReg[Yaw]   * 180.0f / 32768.0f;
         __disable_irq();
-        angle_r = r;  angle_p = p;  angle_y = y;
+        angle_r = r - offset_r;
+        angle_p = p - offset_p;
+        angle_y = y - offset_y;
         __enable_irq();
     }
 }
@@ -118,4 +123,26 @@ void jy901p_poll(void)
 
     /* 将 SDK 解析完的数据包写入 sReg 并触发回调 */
     CopeWitData(ucRegIndex, usRegDataBuff, uiRegDataLen);
+}
+
+void jy901p_set_6axis(void)
+{
+    WitWriteReg(KEY, KEY_UNLOCK);
+    HAL_Delay(1);
+    WitWriteReg(AXIS6, ALGRITHM6);
+    HAL_Delay(1);
+    WitWriteReg(SAVE, SAVE_PARAM);
+}
+
+void jy901p_zero(void)
+{
+    float r, p, y;
+    __disable_irq();
+    r = angle_r + offset_r;
+    p = angle_p + offset_p;
+    y = angle_y + offset_y;
+    __enable_irq();
+    offset_r = r;
+    offset_p = p;
+    offset_y = y;
 }

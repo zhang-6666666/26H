@@ -111,21 +111,8 @@ int main(void)
   MX_TIM4_Init();
   /* USER CODE BEGIN 2 */
 
-  /* JY901P初始化（DMA+SDK） */
-  jy901p_init(&huart2, &hdma_usart2_rx);
-  /* 传感器配置：只输出角度，提高数据刷新率 */
-  WitSetContent(RSW_ANGLE);
-  printf("JY901P init done\r\n");
-
-  /* 电机初始化（TIM1 PWM 已在 MX_TIM1_Init 中配置完毕） */
-  motor_init(&htim1);
-  printf("Motor init done\r\n");
-
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
-
-  /* 编码器初始化（硬件正交解码，TIM2+4） */
-  encoder_init();
   printf("System ready\r\n");
   // /* OLED 初始化 */
   // oled_init(&hi2c1);
@@ -139,7 +126,6 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-    jy901p_poll();
     task_poll();
   }
   /* USER CODE END 3 */

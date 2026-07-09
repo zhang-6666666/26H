@@ -52,6 +52,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/TASK/task.c
     App/ENCODER/encoder.c
     App/PID/pid.c
+    App/CONTROL/control.c
 )
 
 # Add include paths
@@ -65,6 +66,7 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/TASK
     App/ENCODER
     App/PID
+    App/CONTROL
 )
 
 # Add project symbols (macros)
