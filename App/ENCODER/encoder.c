@@ -1,43 +1,29 @@
 #include "encoder.h"
 #include "tim.h"
-Encoder left_encoder;
-Encoder right_encoder;
 
-void Encoder_Init(Encoder* encoder, TIM_HandleTypeDef *htim, unsigned char reverse)
+Encoder encoder_left;
+Encoder encoder_right;
+
+void Encoder_Init(Encoder *enc, TIM_HandleTypeDef *htim, uint8_t reverse)
 {
-  encoder->htim = htim;
-  encoder->reverse = reverse;
-  
-  // 启动定时器的编码器模式
-  HAL_TIM_Encoder_Start(encoder->htim, TIM_CHANNEL_ALL);
+    enc->htim     = htim;
+    enc->reverse  = reverse;
+    enc->count    = 0;
+    enc->total_count = 0;
+    enc->speed_cm_s = 0.0f;
 
-  // 清零计数器
-  __HAL_TIM_SetCounter(encoder->htim, 0);
-
-  // 初始化数据结构
-  encoder->count = 0;
-  encoder->total_count = 0;
-  encoder->speed_cm_s = 0.0f;
+    HAL_TIM_Encoder_Start(enc->htim, TIM_CHANNEL_ALL);
+    __HAL_TIM_SetCounter(enc->htim, 0);
 }
 
-/**
- * @brief 更新编码器数据 (应周期性调用, 例如5ms一次)
- */
-void Encoder_Update(Encoder* encoder)
+void Encoder_Update(Encoder *enc)
 {
-  // 1. 读取原始计数值
-  encoder->count = (int16_t)__HAL_TIM_GetCounter(encoder->htim);
-  // 2. 处理编码器反向
-  encoder->count = encoder->reverse == 0 ? encoder->count : -encoder->count;
-  // 3. 清零硬件计数器，为下个周期做准备
-  __HAL_TIM_SetCounter(encoder->htim, 0);
+    enc->count = (int16_t)__HAL_TIM_GetCounter(enc->htim);
+    enc->count = enc->reverse ? -(enc->count) : enc->count;
+    __HAL_TIM_SetCounter(enc->htim, 0);
 
-  // 4. 累计总数
-  encoder->total_count += encoder->count;
+    enc->total_count += enc->count;
 
-  // 5. 计算速度 (cm/s)
-  // 速度 = (计数值 / PPR) * 周长 / 采样时间
-  encoder->speed_cm_s = (float)encoder->count / ENCODER_PPR * WHEEL_CIRCUMFERENCE_CM / SAMPLING_TIME_S;
+    enc->speed_cm_s = (float)enc->count / ENCODER_PPR
+                    * WHEEL_CIRCUMFERENCE_CM / SAMPLING_TIME_S;
 }
-
-

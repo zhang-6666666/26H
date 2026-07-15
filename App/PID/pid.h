@@ -37,6 +37,9 @@ void pid_set_params(PID_T * _tpPID, float _kp, float _ki, float _kd);
 /* 设置PID输出限幅 */
 void pid_set_limit(PID_T * _tpPID, float _limit);
 
+/* 读取PID参数 */
+void pid_get_params(const PID_T *pid, float *kp, float *ki, float *kd);
+
 /* 重置PID控制器 */
 void pid_reset(PID_T * _tpPID);
 

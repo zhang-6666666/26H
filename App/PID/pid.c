@@ -78,6 +78,13 @@ void pid_set_limit(PID_T * _tpPID, float _limit)
     _tpPID->limit = _limit;
 }
 
+void pid_get_params(const PID_T *pid, float *kp, float *ki, float *kd)
+{
+    if (kp) *kp = pid->kp;
+    if (ki) *ki = pid->ki;
+    if (kd) *kd = pid->kd;
+}
+
 /*******************************************************************************
  * @brief 重置PID控制器
  * @param {PID_T *} _tpPID 指向PID结构体的指针

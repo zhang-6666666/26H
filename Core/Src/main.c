@@ -31,6 +31,7 @@
 #include "motor.h"
 #include "encoder.h"
 #include "task.h"
+#include "uartdbg.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -62,14 +63,7 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-#include <stdio.h>
 
-/* printf 重定向到 USART1，newlib-nano 要求实现 __io_putchar */
-int __io_putchar(int ch)
-{
-    HAL_UART_Transmit(&huart1, (uint8_t *)&ch, 1, 10);
-    return ch;
-}
 /* USER CODE END 0 */
 
 /**
@@ -113,7 +107,7 @@ int main(void)
 
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
-  printf("System ready\r\n");
+  UartDbg_Send(&uart_dbg, "System ready\r\n");
   // /* OLED 初始化 */
   // oled_init(&hi2c1);
   // oled_show_string(1, "JY901P Ready");

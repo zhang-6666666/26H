@@ -1,25 +1,28 @@
-/* TB6612 双路电机驱动 — 低耦合，只依赖 HAL 库 */
+/* TB6612 双路电机驱动 — 配置结构体 + 句柄模式 */
 #ifndef MOTOR_H
 #define MOTOR_H
 
 #include "stm32f1xx_hal.h"
 #include <stdint.h>
 
-/* 初始化：保存 TIM 句柄并启动 PWM，GPIO 由 CubeMX 已配置 */
-void motor_init(TIM_HandleTypeDef *htim);
+typedef struct {
+    GPIO_TypeDef *ain1_port, *ain2_port;
+    uint16_t      ain1_pin,  ain2_pin;
+    TIM_HandleTypeDef *htim;
+    uint32_t      pwm_channel;
+    uint16_t      pwm_period;
+} Motor_Config;
 
-/* 电机 A 运行：permil = -1000 ~ +1000（负值反转，0 滑行停止） */
-void motor_a_run(int16_t permil);
+typedef struct {
+    Motor_Config cfg;
+} Motor;
 
-/* 电机 B 运行：同上 */
-void motor_b_run(int16_t permil);
+void Motor_Init(Motor *m, const Motor_Config *cfg);
+void Motor_Run(Motor *m, int16_t permil);
+void Motor_Coast(Motor *m);
+void Motor_Brake(Motor *m);
 
-/* 电机 A/B 滑行停止（IN1=IN2=0，电机自由转动） */
-void motor_a_coast(void);
-void motor_b_coast(void);
-
-/* 电机 A/B 刹车（IN1=IN2=1，电机短接制动） */
-void motor_a_brake(void);
-void motor_b_brake(void);
+extern Motor motor_left;
+extern Motor motor_right;
 
 #endif

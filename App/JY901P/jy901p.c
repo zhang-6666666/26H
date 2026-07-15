@@ -18,7 +18,7 @@ static uint8_t  dma_buf[DMA_RX_BUF_SIZE];
 static volatile uint32_t dma_last_ndtr;   /* 上一次 DMA NDTR 值，用于计算增量 */
 
 /* 软件环形缓冲（ISR 写入，主循环读取） */
-static ringbuf_t rb;
+static RingBuf rb;
 static uint8_t   rb_buf[RB_BUF_SIZE];
 
 /* 角度数据 */
@@ -66,7 +66,7 @@ void jy901p_init(UART_HandleTypeDef *huart, DMA_HandleTypeDef *hdma_rx)
     j_hdma_rx = hdma_rx;
 
     /* 初始化环形缓冲 */
-    ringbuf_init(&rb, rb_buf, RB_BUF_SIZE);
+    RingBuf_Init(&rb, rb_buf, RB_BUF_SIZE);
 
     /* 初始化 SDK：正常协议，地址 0x50 */
     WitInit(WIT_PROTOCOL_NORMAL, 0x50);
@@ -106,7 +106,7 @@ void jy901p_uart_isr(UART_HandleTypeDef *huart)
     /* 逐字节写入软件环形缓冲（ISR 侧，put 是安全的） */
     for (uint32_t i = 0; i < new_bytes; i++) {
         uint8_t byte = dma_buf[(last + i) & mask];
-        ringbuf_put(&rb, &byte, 1);
+        RingBuf_Put(&rb, &byte, 1);
     }
 
     dma_last_ndtr = ndtr;
@@ -116,8 +116,8 @@ void jy901p_poll(void)
 {
     /* 从环形缓冲取字节逐字节喂给 SDK 状态机 */
     uint8_t byte;
-    while (ringbuf_available(&rb)) {
-        ringbuf_get(&rb, &byte, 1);
+    while (RingBuf_Avail(&rb)) {
+        RingBuf_Get(&rb, &byte, 1);
         WitSerialDataIn(byte);
     }
 
@@ -125,13 +125,36 @@ void jy901p_poll(void)
     CopeWitData(ucRegIndex, usRegDataBuff, uiRegDataLen);
 }
 
-void jy901p_set_6axis(void)
+void jy901p_config(void)
 {
     WitWriteReg(KEY, KEY_UNLOCK);
-    HAL_Delay(1);
+    HAL_Delay(50);
+
+    /* 6 轴模式（加速度+陀螺仪，无磁力计）— 抗电机磁场干扰 */
     WitWriteReg(AXIS6, ALGRITHM6);
-    HAL_Delay(1);
+    HAL_Delay(10);
+
+    /* === 9 轴模式（含磁力计校正偏航），用于无强磁场环境 === */
+    // WitWriteReg(KEY, KEY_UNLOCK);
+    // HAL_Delay(50);
+    // WitWriteReg(AXIS6, ALGRITHM9);
+    // HAL_Delay(10);
+
+    /* 输出频率 100Hz（默认 10Hz 跟不上 50ms 控制周期） */
+    WitWriteReg(RRATE, RRATE_100HZ);
+    HAL_Delay(10);
+
     WitWriteReg(SAVE, SAVE_PARAM);
+    HAL_Delay(100);
+}
+
+void jy901p_calibrate_gyro(void)
+{
+    /* 启动加速度+陀螺仪零偏校准（传感器需静止、水平） */
+    WitWriteReg(KEY, KEY_UNLOCK);
+    HAL_Delay(10);
+    WitWriteReg(CALSW, CALGYROACC);
+    /* 调用后主循环需持续 jy901p_poll() 约 2-3 秒等待校准完成 */
 }
 
 void jy901p_zero(void)
