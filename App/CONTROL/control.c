@@ -1,15 +1,17 @@
-/* 速度 PID + 航向 PID */
+/* 速度 PID + 航向 PID + 模式切换 */
 #include "control.h"
 #include "pid.h"
 #include "encoder.h"
 #include "jy901p.h"
 #include "motor.h"
-#include <line.h>
+#include "line_follow.h"
 
 
 static PID_T pid_speed_a, pid_speed_b, pid_yaw;
 static float base_speed_a, base_speed_b;
-static float pwm_a_out, pwm_b_out;  /* 供串口调试读取 */
+static float pwm_a_out, pwm_b_out;
+static CtrlMode s_mode = CTRL_STOP;
+
 
 void control_init(void)
 {
@@ -31,12 +33,46 @@ void control_set_yaw(float target)
     pid_set_target(&pid_yaw, target);
 }
 
+void control_set_mode(CtrlMode mode)
+{
+    s_mode = mode;
+}
+CtrlMode control_get_mode(void) { return s_mode; }
+
 void control_update(float dt)
 {
+    CtrlMode mode = s_mode;
+
+    if (mode == CTRL_STOP) {
+        Motor_Coast(&motor_left);
+        Motor_Coast(&motor_right);
+        return;
+    }
+
     Encoder_Update(&encoder_left);
     Encoder_Update(&encoder_right);
 
-    float steer = (float)pid_calculate_angle_positional(&pid_yaw, angle_y);
+    float steer = 0.0f;
+
+    switch (mode) {
+    case CTRL_SPEED:
+        steer = 0.0f;
+        break;
+
+    case CTRL_YAW:
+        steer = (float)pid_calculate_angle_positional(&pid_yaw, angle_y);
+        break;
+
+    case CTRL_LINE:
+        {
+            LineFollow_Result r = LineFollow_Update();
+            steer = r.steer;
+        }
+        break;
+
+    default:
+        break;
+    }
 
     pid_set_target(&pid_speed_a, base_speed_a - steer);
     pid_set_target(&pid_speed_b, base_speed_b + steer);

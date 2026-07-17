@@ -53,8 +53,9 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/ENCODER/encoder.c
     App/PID/pid.c
     App/CONTROL/control.c
-    App/LINE/line.c
+    App/GRAY/gray.c
     App/UARTDBG/uartdbg.c
+    App/LINEFOLLOW/line_follow.c
     App/CMDPARSER/cmd_handler.c
 )
 
@@ -70,8 +71,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/ENCODER
     App/PID
     App/CONTROL
-    App/LINE
+    App/GRAY
     App/UARTDBG
+    App/LINEFOLLOW
     App/CMDPARSER
 )
 
@@ -87,7 +89,7 @@ list(REMOVE_ITEM CMAKE_C_IMPLICIT_LINK_LIBRARIES ob)
 target_link_libraries(${CMAKE_PROJECT_NAME}
     stm32cubemx
     -Wl,-u,_printf_float     # 浮点 printf
-    -Wl,-u,_scanf_float      # 浮点 scanf（串口命令解析用）
+    -Wl,-u,_scanf_float      # 浮点 scanf
 
     # Add user defined libraries
 )

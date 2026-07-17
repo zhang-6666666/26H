@@ -28,6 +28,7 @@ static void cmd_help(const char *args)
         "pidb=kp,ki,kd      set motor B speed PID\r\n"
         "pindy=kp,ki,kd     set yaw PID\r\n"
         "vofa=0/1           disable/enable VOFA+ data stream\r\n"
+        "mode=stop|speed|yaw|line  control mode\r\n"
         "ping               check connection\r\n"
         "help               this list\r\n");
 }
@@ -91,6 +92,15 @@ static void cmd_vofa(const char *args)
     }
 }
 
+static void cmd_mode(const char *args)
+{
+    if (strcmp(args, "stop") == 0)  { control_set_mode(CTRL_STOP);  UartDbg_Send(&uart_dbg, "mode=stop\r\n");  return; }
+    if (strcmp(args, "speed") == 0) { control_set_mode(CTRL_SPEED); UartDbg_Send(&uart_dbg, "mode=speed\r\n"); return; }
+    if (strcmp(args, "yaw") == 0)   { control_set_mode(CTRL_YAW);   UartDbg_Send(&uart_dbg, "mode=yaw\r\n");   return; }
+    if (strcmp(args, "line") == 0)  { control_set_mode(CTRL_LINE);  UartDbg_Send(&uart_dbg, "mode=line\r\n");  return; }
+    UartDbg_Send(&uart_dbg, "usage: mode=stop|speed|yaw|line\r\n");
+}
+
 /* ===================== 命令表 ===================== */
 
 typedef struct {
@@ -107,6 +117,7 @@ static const CmdEntry s_cmds[] = {
     {"pidb",  cmd_pidb},
     {"pindy", cmd_pindy},
     {"vofa",  cmd_vofa},
+    {"mode",  cmd_mode},
 };
 
 void CmdHandler_Process(const char *line)
