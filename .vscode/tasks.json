@@ -1,0 +1,50 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build",
+            "type": "shell",
+            "command": "ninja",
+            "options": {
+                "cwd": "${workspaceFolder}/build/Debug"
+            },
+            "problemMatcher": "$gcc",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "flash",
+            "type": "shell",
+            "command": "D:/openocd/xpack/xpack-openocd-0.12.0-2/bin/openocd.exe",
+            "args": [
+                "-s", "D:/openocd/xpack/xpack-openocd-0.12.0-2/openocd/scripts",
+                "-f", "interface/cmsis-dap.cfg",
+                "-f", "target/stm32f1x.cfg",
+                "-c", "program build/Debug/JY901P.elf verify reset exit"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [],
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "build & flash",
+            "dependsOn": [
+                "build",
+                "flash"
+            ],
+            "dependsOrder": "sequence",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            }
+        }
+    ]
+}

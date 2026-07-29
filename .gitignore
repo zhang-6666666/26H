@@ -1,55 +1,60 @@
-# Prerequisites
-*.d
-
-# Object files
+# ===================== 编译输出 =====================
+build/
+_build/
+b/
+build2/
 *.o
-*.ko
 *.obj
 *.elf
-
-# Linker output
-*.ilk
+*.hex
+*.bin
 *.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
+*.d
 *.a
 *.la
 *.lo
+*.lib
+*.exp
 
-# Shared objects (inc. Windows DLLs)
-*.dll
-*.so
-*.so.*
-*.dylib
+# ===================== CubeMX 临时文件 =====================
+mx.scratch
+*.bak
 
-# Executables
-*.exe
-*.out
-*.app
-*.i*86
-*.x86_64
-*.hex
+# ===================== IDE / 编辑器 =====================
+.vscode/.cache/
+.vscode/*.log
+.vscode/.browse*
+.idea/
+*.swp
+*.swo
+*~
+\#*\#
+.\#*
 
-# Debug files
-*.dSYM/
-*.su
-*.idb
-*.pdb
+# ===================== 操作系统 =====================
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
-modules.order
-Module.symvers
-Mkfile.old
-dkms.conf
+# ===================== Claude Code =====================
+.claude/
 
-# debug information files
-*.dwo
+# ===================== 调试 / 日志 =====================
+*.log
+*.tmp
+*.temp
+
+# ===================== 压缩包 =====================
+*.7z
+*.zip
+*.gz
+*.rar
+*.tar
+
+# ===================== 保留项 =====================
+!.settings
+!CMakePresets.json
