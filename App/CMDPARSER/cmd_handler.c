@@ -2,7 +2,6 @@
 #include "cmd_handler.h"
 #include "control.h"
 #include "encoder.h"
-#include "jy901p.h"
 #include "uartdbg.h"
 #include <stdio.h>
 #include <string.h>
@@ -23,12 +22,10 @@ static void cmd_help(const char *args)
     (void)args;
     UartDbg_Send(&uart_dbg,
         "spd=left,right     set speed targets (cm/s)\r\n"
-        "yaw=angle          set yaw target (°)\r\n"
         "pida=kp,ki,kd      set motor A speed PID\r\n"
         "pidb=kp,ki,kd      set motor B speed PID\r\n"
-        "pindy=kp,ki,kd     set yaw PID\r\n"
         "vofa=0/1           disable/enable VOFA+ data stream\r\n"
-        "mode=stop|speed|yaw|line  control mode\r\n"
+        "mode=stop|speed|line  control mode\r\n"
         "ping               check connection\r\n"
         "help               this list\r\n");
 }
@@ -41,17 +38,6 @@ static void cmd_spd(const char *args)
         UartDbg_Send(&uart_dbg, "spd=%.1f,%.1f\r\n", a, b);
     } else {
         UartDbg_Send(&uart_dbg, "usage: spd=left,right\r\n");
-    }
-}
-
-static void cmd_yaw(const char *args)
-{
-    float a;
-    if (sscanf(args, "%f", &a) == 1) {
-        control_set_yaw(a);
-        UartDbg_Send(&uart_dbg, "yaw=%.1f\r\n", a);
-    } else {
-        UartDbg_Send(&uart_dbg, "usage: yaw=angle\r\n");
     }
 }
 
@@ -76,11 +62,6 @@ static void cmd_pidb(const char *args)
     cmd_pid_set(args, 0, 0, 0, control_set_pid_speed_b, "pidb");
 }
 
-static void cmd_pindy(const char *args)
-{
-    cmd_pid_set(args, 0, 0, 0, control_set_pid_yaw, "pindy");
-}
-
 static void cmd_vofa(const char *args)
 {
     int v;
@@ -96,9 +77,8 @@ static void cmd_mode(const char *args)
 {
     if (strcmp(args, "stop") == 0)  { control_set_mode(CTRL_STOP);  UartDbg_Send(&uart_dbg, "mode=stop\r\n");  return; }
     if (strcmp(args, "speed") == 0) { control_set_mode(CTRL_SPEED); UartDbg_Send(&uart_dbg, "mode=speed\r\n"); return; }
-    if (strcmp(args, "yaw") == 0)   { control_set_mode(CTRL_YAW);   UartDbg_Send(&uart_dbg, "mode=yaw\r\n");   return; }
     if (strcmp(args, "line") == 0)  { control_set_mode(CTRL_LINE);  UartDbg_Send(&uart_dbg, "mode=line\r\n");  return; }
-    UartDbg_Send(&uart_dbg, "usage: mode=stop|speed|yaw|line\r\n");
+    UartDbg_Send(&uart_dbg, "usage: mode=stop|speed|line\r\n");
 }
 
 /* ===================== 命令表 ===================== */
@@ -112,10 +92,8 @@ static const CmdEntry s_cmds[] = {
     {"ping",  cmd_ping},
     {"help",  cmd_help},
     {"spd",   cmd_spd},
-    {"yaw",   cmd_yaw},
     {"pida",  cmd_pida},
     {"pidb",  cmd_pidb},
-    {"pindy", cmd_pindy},
     {"vofa",  cmd_vofa},
     {"mode",  cmd_mode},
 };
@@ -151,8 +129,8 @@ void CmdHandler_SendVofa(void)
     if (!g_vofa_enable) return;
 
     float data[6];
-    data[0] = angle_y;                              /* 当前偏航角 */
-    data[1] = control_get_yaw();                    /* 目标偏航角 */
+    data[0] = 0.0f;                                   /* yaw (removed) */
+    data[1] = 0.0f;                                   /* yaw target (removed) */
     data[2] = encoder_left.speed_cm_s;              /* 左轮速度 */
     data[3] = encoder_right.speed_cm_s;             /* 右轮速度 */
     data[4] = control_get_pwm_a();                  /* 左轮 PWM */

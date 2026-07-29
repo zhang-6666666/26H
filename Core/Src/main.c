@@ -27,8 +27,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "jy901p.h"
-#include "wit_c_sdk.h"
 #include "motor.h"
 #include "encoder.h"
 #include "task.h"
@@ -98,7 +96,6 @@ int main(void)
   MX_GPIO_Init();
   MX_DMA_Init();
   MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
   MX_TIM1_Init();
   MX_I2C1_Init();
   MX_TIM2_Init();
@@ -112,7 +109,7 @@ int main(void)
   UartDbg_Send(&uart_dbg, "System ready\r\n");
   // /* OLED 初始化 */
   // oled_init(&hi2c1);
-  // oled_show_string(1, "JY901P Ready");
+  // oled_show_string(1, "System Ready");
   /* USER CODE END 2 */
 
   /* Infinite loop */

@@ -45,9 +45,7 @@ target_link_directories(${CMAKE_PROJECT_NAME} PRIVATE
 # Add sources to executable
 target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user sources here
-    Mod/WIT/wit_c_sdk.c
     App/RINGBUF/ringbuf.c
-    App/JY901P/jy901p.c
     App/MOTOR/motor.c
     App/TASK/task.c
     App/ENCODER/encoder.c
@@ -62,9 +60,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
 # Add include paths
 target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     # Add user defined include paths
-    Mod/WIT
     App/RINGBUF
-    App/JY901P
     App/MOTOR
     App/OLED
     App/TASK
@@ -94,3 +90,4 @@ target_link_libraries(${CMAKE_PROJECT_NAME}
     # Add user defined libraries
 )
 
+set(CMAKE_C_FLAGS_RELEASE "-Os -g0")   # 发布：最小 + 去调试符号

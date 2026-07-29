@@ -3,9 +3,10 @@
 #include <math.h>
 #include "pid.h"
 /* 内部功能函数 */
-static void pid_formula_incremental(PID_T * _tpPID);
 static void pid_formula_positional(PID_T * _tpPID);
 static void pid_out_limit(PID_T * _tpPID);
+static float pid_normalize_angle_error(float error);
+static void pid_formula_angle_positional(PID_T * _tpPID);
 
 /*******************************************************************************
  * @brief PID初始化函数，用于初始化PID结构体
@@ -25,7 +26,6 @@ void pid_init(PID_T * _tpPID, float _kp, float _ki, float _kd, float _target, fl
     _tpPID->kd = _kd;          // 微分
     _tpPID->target = _target;  // 目标值
     _tpPID->limit = _limit;    // 限幅值
-    _tpPID->integral_limit = _limit; // 积分限幅默认等于输出限幅
     _tpPID->integral = 0;      // 积分项清零
     _tpPID->last_error = 0;    // 上次误差清零
     _tpPID->last2_error = 0;   // 上上次误差清零
@@ -45,9 +45,6 @@ void pid_init(PID_T * _tpPID, float _kp, float _ki, float _kd, float _target, fl
 void pid_set_target(PID_T * _tpPID, float _target)
 {
     _tpPID->target = _target;
-    // pid_init(_tpPID,
-    //        _tpPID->kp, _tpPID->ki, _tpPID->kd,
-    //        _tpPID->target, _tpPID->limit);
 }
 
 /*******************************************************************************
@@ -117,68 +114,65 @@ float pid_calculate_positional(PID_T * _tpPID, float _current)
     return _tpPID->out;
 }
 
-/*******************************************************************************
- * @brief 计算增量式PID
- * @param {PID_T *} _tpPID 指向PID结构体的指针
- * @param {float} _current 当前值
- * @return {float} PID计算后的输出值
- * @note 增量式PID：P-稳定性，I-响应性，D-准确性
- *******************************************************************************/
-float pid_calculate_incremental(PID_T * _tpPID, float _current)
-{
-    _tpPID->current = _current;
-    pid_formula_incremental(_tpPID);
-    pid_out_limit(_tpPID);
-    return _tpPID->out;
-}
 
-/**
- * @brief  【新函数】计算位置式PID输出，专门用于角度控制，可处理±180°跳变。
- * @param  pid: PID控制器结构体指针
- * @param  current_value: MPU6050 测量的当前角度
- * @retval PID控制器输出值
- */
+/*******************************************************************************
+ * @brief 计算角度环位置式PID，可处理±180°跳变
+ * @param {PID_T *} pid 指向PID结构体的指针
+ * @param {float} current_value 当前角度值
+ * @return {int} PID计算后的输出值（整型）
+ * @note 模仿pid_calculate_positional，将核心计算委托给静态函数
+ *******************************************************************************/
 int pid_calculate_angle_positional(PID_T *pid, float current_value)
 {
-    /* 1. 更新当前值 */
     pid->current = current_value;
-
-    /* 2. 计算原始误差 */
-    pid->error = pid->target - pid->current;
-
-    /* 3. 【核心】将误差归一化到最短路径 (-180° ~ +180°) */
-    if (pid->error > 180.0f)
-    {
-        pid->error -= 360.0f;
-    }
-    else if (pid->error < -180.0f)
-    {
-        pid->error += 360.0f;
-    }
-
-    /* 4. 积分项累加 */
-    pid->integral += pid->error;
-    /* 5. 积分限幅 */
-    // 注意：您的 PID_T 结构体中没有单独的积分限幅值，
-    // 这里我们借用总输出限幅值 limit 来对积分项进行限制，这是一个常见的做法。
-    pid->integral = pid_constrain(pid->integral, -pid->limit, pid->limit);
-    /* 6. 微分项计算 */
-    // 注意：您的 PID_T 结构体中没有 last_error，但有 last_error 和 last2_error
-    // 我们遵循您增量式PID的风格，使用 (error - last_error)
-    float derivative = pid->error - pid->last_error;
-    /* 7. 计算总输出 */
-    pid->p_out = pid->kp * pid->error;
-    pid->i_out = pid->ki * pid->integral;
-    pid->d_out = pid->kd * derivative;
-    pid->out = pid->p_out + pid->i_out + pid->d_out;
-    /* 8. 总输出限幅 */
-    pid->out = pid_constrain(pid->out, -pid->limit, pid->limit);
-    /* 9. 更新历史误差值，为下一次计算做准备 */
-    pid->last_error = pid->error;
+    pid_formula_angle_positional(pid);
+    pid_out_limit(pid);
     return (int)pid->out;
 }
 
 /* ————————————————————————————————— PID相关的功能函数 ————————————————————————————————— */
+/*******************************************************************************
+ * @brief 将角度误差归一化到最短路径 (-180° ~ +180°)
+ * @param {float} error 原始误差值
+ * @return {float} 归一化后的误差值
+ * @note 用于处理角度在±180°处的跳变问题
+ *******************************************************************************/
+static float pid_normalize_angle_error(float error)
+{
+    if (error > 180.0f)
+    {
+        error -= 360.0f;
+    }
+    else if (error < -180.0f)
+    {
+        error += 360.0f;
+    }
+    return error;
+}
+
+/*******************************************************************************
+ * @brief 角度环位置式PID公式
+ * @param {PID_T *} _tpPID 传入要计算的PID参数指针
+ * @return {*}
+ * @note 在pid_formula_positional基础上增加角度归一化和积分限幅
+ *******************************************************************************/
+static void pid_formula_angle_positional(PID_T * _tpPID)
+{
+    _tpPID->error = _tpPID->target - _tpPID->current;
+    _tpPID->error = pid_normalize_angle_error(_tpPID->error);
+
+    _tpPID->integral += _tpPID->error;
+    _tpPID->integral = pid_constrain(_tpPID->integral, -_tpPID->limit, _tpPID->limit);
+
+    _tpPID->p_out = _tpPID->kp * _tpPID->error;
+    _tpPID->i_out = _tpPID->ki * _tpPID->integral;
+    _tpPID->d_out = _tpPID->kd * (_tpPID->error - _tpPID->last_error);
+
+    _tpPID->out = _tpPID->p_out + _tpPID->i_out + _tpPID->d_out;
+
+    _tpPID->last_error = _tpPID->error;
+}
+
 /*******************************************************************************
  * @brief 输出限幅函数
  * @param {PID_T *} _tpPID 指向PID结构体的指针
@@ -193,43 +187,6 @@ static void pid_out_limit(PID_T * _tpPID)
         _tpPID->out = -_tpPID->limit;
 }
 
-/*******************************************************************************
- * @brief 增量式PID公式
- * @param {PID_T *} _tpPID  传入要计算的PID参数指针
- * @return {*}
- * @note 在增量式中，P-稳定性，I-响应性，D-准确性
- *******************************************************************************/
-static void pid_formula_incremental(PID_T * _tpPID)
-{
-    // _tpPID->error = _tpPID->target - _tpPID->current;
-    
-    // _tpPID->p_out = _tpPID->kp * (_tpPID->error - _tpPID->last_error);
-    // _tpPID->i_out = _tpPID->ki * _tpPID->error;
-    // _tpPID->d_out = _tpPID->kd * (_tpPID->error - 2 * _tpPID->last_error + _tpPID->last2_error);
-    
-    // _tpPID->out += _tpPID->p_out + _tpPID->i_out + _tpPID->d_out;
-    
-    // _tpPID->last2_error = _tpPID->last_error;
-    // _tpPID->last_error = _tpPID->error;
-    float delta_output; // 定义一个变量来存储本次计算出的总增量
-
-    _tpPID->error = _tpPID->target - _tpPID->current;
-
-    // P, I, D三项的计算是正确的
-    _tpPID->p_out = _tpPID->kp * (_tpPID->error - _tpPID->last_error);
-    _tpPID->i_out = _tpPID->ki * _tpPID->error;
-    _tpPID->d_out = _tpPID->kd * (_tpPID->error - 2 * _tpPID->last_error + _tpPID->last2_error);
-
-    // 1. 计算总增量
-    delta_output = _tpPID->p_out + _tpPID->i_out + _tpPID->d_out;
-
-    // 2. 将总增量累加到总输出上
-    _tpPID->out += delta_output;
-    // 更新历史误差（这部分是正确的）
-
-    _tpPID->last2_error = _tpPID->last_error;
-    _tpPID->last_error = _tpPID->error;
-}
 
 /*******************************************************************************
  * @brief 位置式PID公式
@@ -242,7 +199,6 @@ static void pid_formula_positional(PID_T * _tpPID)
     _tpPID->error = _tpPID->target - _tpPID->current;
     _tpPID->integral += _tpPID->error;
     
-    pid_app_limit_integral(_tpPID, -_tpPID->integral_limit, _tpPID->integral_limit);
     _tpPID->p_out = _tpPID->kp * _tpPID->error;
     _tpPID->i_out = _tpPID->ki * _tpPID->integral;
     _tpPID->d_out = _tpPID->kd * (_tpPID->error - _tpPID->last_error);
@@ -269,22 +225,4 @@ float pid_constrain(float value, float min, float max)
         return value;
 }
 
-/**
- * @brief 积分限幅函数
- * @param pid PID控制器
- * @param min 最小值
- * @param max 最大值
- * @note 在使用增量式PID控制时此函数不需要，但为了可能切换回位置式PID而保留
- */
-void pid_app_limit_integral(PID_T *pid, float min, float max)
-{
-    if (pid->integral > max)
-    {
-        pid->integral = max;
-    }
-    else if (pid->integral < min)
-    {
-        pid->integral = min;
-    }
-}
 
