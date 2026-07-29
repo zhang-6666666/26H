@@ -14,9 +14,9 @@
     ],
     "cortex-debug.variableUseNaturalFormat": true,
     "python.analysis.extraPaths": [
-        "C:\\Users\\1\\.kendryte\\k230_canmv_stubs\\bbc87b8459f7d8e85c75276005f21f5fd0ca2914"
+        "/home/hua/.kendryte/k230_canmv_stubs/27f796391c31029a8c14304afc478ccc17a9829c"
     ],
-    "python.analysis.stubPath": "C:\\Users\\1\\.kendryte\\k230_canmv_pylance\\6ecf42fdfbdd8944\\typings",
+    "python.analysis.stubPath": "/home/hua/.kendryte/k230_canmv_pylance/9c9625157533aead/typings",
     "python.analysis.diagnosticSeverityOverrides": {
         "reportMissingModuleSource": "none"
     }

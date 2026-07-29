@@ -1,61 +1,56 @@
-/* 8 路灰度传感器驱动 — ADC 多路复用读取 + 二值化 + 加权位置 */
+/* 8 路灰度传感器驱动 — GPIO 数字输入 + 加权位置
+   物理排列：从左到右 0 1 2 3 4 5 6 7
+*/
+
 #include "gray.h"
-#include "adc.h"
+#include "main.h"
 
 GraySensor gs;
 
-/* 引脚定义 */
-#define AD0_PORT   GPIOB
-#define AD0_PIN    GPIO_PIN_0
-#define AD1_PORT   GPIOB
-#define AD1_PIN    GPIO_PIN_1
-#define AD2_PORT   GPIOB
-#define AD2_PIN    GPIO_PIN_4
+/* ---- 位置权重：左负右正，8 路均匀分布 ---- */
+/*          通道:    0    1    2    3     4    5    6    7   */
+static const int8_t s_weight[8] = { -7, -5, -3, -1,  1,  3,  5,  7 };
 
-/* 物理位置权重：左负右正 */
-static const int8_t s_w[8] = { -8, -6, -4, -1, 1, 4, 6, 8 };
+/* ---- 每路对应的 GPIO 端口和引脚 ---- */
+typedef struct {
+    GPIO_TypeDef *port;
+    uint16_t      pin;
+} LinePin;
 
-static void set_addr(uint8_t ch)
-{
-    HAL_GPIO_WritePin(AD0_PORT, AD0_PIN, (ch & 0x01) ? GPIO_PIN_RESET : GPIO_PIN_SET);
-    HAL_GPIO_WritePin(AD1_PORT, AD1_PIN, (ch & 0x02) ? GPIO_PIN_RESET : GPIO_PIN_SET);
-    HAL_GPIO_WritePin(AD2_PORT, AD2_PIN, (ch & 0x04) ? GPIO_PIN_RESET : GPIO_PIN_SET);
-}
+static const LinePin s_line[8] = {
+    { LINE_0_GPIO_Port, LINE_0_Pin },   /* 最左  */
+    { LINE_1_GPIO_Port, LINE_1_Pin },
+    { LINE_2_GPIO_Port, LINE_2_Pin },
+    { LINE_3_GPIO_Port, LINE_3_Pin },
+    { LINE_4_GPIO_Port, LINE_4_Pin },
+    { LINE_5_GPIO_Port, LINE_5_Pin },
+    { LINE_6_GPIO_Port, LINE_6_Pin },
+    { LINE_7_GPIO_Port, LINE_7_Pin },   /* 最右  */
+};
 
-static uint16_t read_adc(void)
-{
-    HAL_ADC_Start(&hadc1);
-    if (HAL_ADC_PollForConversion(&hadc1, 1) == HAL_OK)
-        return HAL_ADC_GetValue(&hadc1);
-    return 0;
-}
+/* ================================================================ */
 
-void Gray_Init(GraySensor *gs) { (void)gs; }
-
-void Gray_Update(GraySensor *gs)
+void Gray_Update(GraySensor *sensor)
 {
     uint8_t d = 0;
 
     for (uint8_t i = 0; i < 8; i++) {
-        set_addr(i);
-        uint32_t sum = 0;
-        for (uint8_t j = 0; j < 8; j++) sum += read_adc();
-        gs->raw[i] = (uint16_t)(sum / 8);
-
-        /* 二值化：低于阈值 → 黑线 */
-        if (gs->raw[i] < (GRAY_BLACK_DEFAULT + GRAY_WHITE_DEFAULT) / 2)
+        /* 低电平 = 黑线（传感器模块输出低有效） */
+        if (HAL_GPIO_ReadPin(s_line[i].port, s_line[i].pin) == GPIO_PIN_RESET) {
             d |= (1 << i);
+        }
     }
-    gs->digital = d;
+    sensor->digital = d;
 }
 
-int8_t Gray_Position(const GraySensor *gs)
+int8_t Gray_Position(const GraySensor *sensor)
 {
-    int8_t sum = 0, cnt = 0;
+    int8_t  sum = 0;
+    uint8_t cnt = 0;
 
     for (uint8_t i = 0; i < 8; i++) {
-        if (gs->digital & (1 << i)) {
-            sum += s_w[i];
+        if (sensor->digital & (1 << i)) {
+            sum += s_weight[i];
             cnt++;
         }
     }
@@ -63,4 +58,3 @@ int8_t Gray_Position(const GraySensor *gs)
     return (cnt == 0) ? 127 : (sum / cnt);
 }
 
-uint8_t Gray_Raw(const GraySensor *gs) { return gs->digital; }
