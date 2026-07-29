@@ -7,5 +7,6 @@
 void     task_init(void);
 void     task_poll(void);
 uint32_t task_tick(void);
+uint32_t task_sec(void);
 
 #endif

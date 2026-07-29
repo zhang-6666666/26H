@@ -8,6 +8,7 @@
 #include "uartdbg.h"
 #include "usart.h"
 #include "tim.h"
+#include "key.h"
 
 
 /* ===================== 常量 ===================== */
@@ -16,20 +17,24 @@
 
 /* ===================== 内部状态 ===================== */
 static volatile uint32_t s_tick;         /* 1ms 系统节拍（TIM3 ISR 自增） */
+static volatile uint32_t s_sec;          /* 秒计数（TIM3 ISR，1000ms 进位） */
+static uint32_t s_ms_acc;              /* ISR 内部毫秒累加器 */
 static uint32_t s_last_send;            /* 上次发送时刻 (tick) */
 static uint32_t last_pid_tick;          /* 上次 PID 计算时刻 (tick) */
 
 
-uint32_t task_tick(void)
-{
-    return s_tick;
-}
+uint32_t task_tick(void) { return s_tick; }
+uint32_t task_sec(void)  { return s_sec;  }
 
 /* ===================== HAL 弱回调覆盖 ===================== */
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == TIM3) s_tick++;
+    if (htim->Instance == TIM3) {
+        s_tick++;
+        if (++s_ms_acc >= 1000) { s_ms_acc = 0; s_sec++; }
+        Key_Tick();  /* 按键扫描: 1ms tick → 内部 20 分频 = 20ms 周期 */
+    }
 }
 
 /* ===================== 初始化 ===================== */
