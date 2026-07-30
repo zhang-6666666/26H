@@ -12,5 +12,6 @@ typedef enum {
 
 void control_init(CtrlMode mode, float speed_l, float speed_r);
 void control_update();
+CtrlMode control_get_mode(void);
 
 #endif

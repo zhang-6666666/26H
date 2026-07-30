@@ -55,6 +55,12 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/UARTDBG/uartdbg.c
     App/LINEFOLLOW/line_follow.c
     App/CMDPARSER/cmd_handler.c
+    App/OLED/oled.c
+    App/KEY/key.c
+    App/QUESTION/question.c
+    App/Zhangdatou/fifo.c
+    App/Zhangdatou/Emm_V5.c
+    App/Zhangdatou/motor_bujin.c
 )
 
 # Add include paths
@@ -71,6 +77,9 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/UARTDBG
     App/LINEFOLLOW
     App/CMDPARSER
+    App/KEY
+    App/QUESTION
+    App/Zhangdatou
 )
 
 # Add project symbols (macros)

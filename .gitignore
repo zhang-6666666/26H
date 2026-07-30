@@ -16,14 +16,17 @@ build2/
 *.lib
 *.exp
 
-# ===================== CubeMX 临时文件 =====================
+# ===================== CubeMX / STM32 自动生成 =====================
 mx.scratch
 *.bak
+*.ioc
+Drivers/
 
 # ===================== IDE / 编辑器 =====================
-.vscode/.cache/
-.vscode/*.log
-.vscode/.browse*
+.vscode/
+.settings/
+.clangd
+.mxproject
 .idea/
 *.swp
 *.swo
@@ -56,5 +59,4 @@ $RECYCLE.BIN/
 *.tar
 
 # ===================== 保留项 =====================
-!.settings
 !CMakePresets.json

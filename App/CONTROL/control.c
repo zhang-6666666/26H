@@ -76,6 +76,8 @@ void control_update(void)
     Motor_Run(&motor_right, (int16_t)pwm_b_out);
 }
 
+CtrlMode control_get_mode(void) { return s_mode; }
+
 /* ===================== 状态读取 ===================== */
 
 

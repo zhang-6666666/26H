@@ -27,10 +27,9 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "motor.h"
-#include "encoder.h"
 #include "task.h"
 #include "uartdbg.h"
+#include "motor_bujin.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -109,9 +108,6 @@ int main(void)
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
   UartDbg_Send(&uart_dbg, "System ready\r\n");
-  // /* OLED 初始化 */
-  // oled_init(&hi2c1);
-  // oled_show_string(1, "System Ready");
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -122,6 +118,8 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     task_poll();
+    Motor_Rx_Process();          // 解析电机应答，更新 motor_state
+
   }
   /* USER CODE END 3 */
 }
@@ -173,7 +171,24 @@ void SystemClock_Config(void)
 }
 
 /* USER CODE BEGIN 4 */
-
+/*
+ * TIM1 更新中断（仅高级定时器，需使用 TIM1_UP_IRQHandler）
+ * 当前 TIM1 已用于电机 PWM，且 flash 仅剩 ~200B，
+ * 若需在此添加计数逻辑，建议先精简其他模块腾出空间。
+ *
+ * 参考写法：
+ *   void TIM1_UP_IRQHandler(void) {
+ *     HAL_TIM_IRQHandler(&htim1);
+ *     if (__HAL_TIM_GET_FLAG(&htim1, TIM_FLAG_UPDATE) != RESET) {
+ *       if (__HAL_TIM_GET_IT_SOURCE(&htim1, TIM_IT_UPDATE) != RESET) {
+ *         __HAL_TIM_CLEAR_IT(&htim1, TIM_IT_UPDATE);
+ *         // 用户计数代码...
+ *       }
+ *     }
+ *   }
+ *
+ * 目前用 TIM3 的 task_tick() 代替（见 task_poll 区域）。
+ */
 /* USER CODE END 4 */
 
 /**
