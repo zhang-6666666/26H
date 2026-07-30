@@ -29,6 +29,7 @@
 /* USER CODE BEGIN Includes */
 #include "task.h"
 #include "uartdbg.h"
+#include "oled.h"
 #include "motor_bujin.h"
 /* USER CODE END Includes */
 
@@ -61,6 +62,29 @@ void SystemClock_Config(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+
+/* 秒数刷新 OLED：计时逻辑在 task.c 的 TIM3 ISR，这里只管显示 */
+static void oled_tick_display(void)
+{
+  static uint32_t last;
+  uint32_t sec = task_sec();
+  if (sec == last) return;
+  last = sec;
+
+  char s[14];
+  int i = sizeof(s) - 1;
+  s[i--] = '\0';
+  uint32_t v = sec;
+  if (v == 0) s[i--] = '0';
+  else while (v) { s[i--] = '0' + (v % 10); v /= 10; }
+
+  oled_set_cursor(0, 0);
+  oled_print("               ");
+  oled_set_cursor(0, 0);
+  oled_print("SEC:");
+  oled_print(&s[i + 1]);
+  oled_show();
+}
 
 /* USER CODE END 0 */
 
@@ -104,6 +128,7 @@ int main(void)
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   Motor_Step_Init();
+
   /* USER CODE BEGIN 2 */
 
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
@@ -114,6 +139,13 @@ int main(void)
 //  Motor_Step_MoveRel(REV2P(1), 1000);     // 转1圈
 //  Motor_Step_MoveRel(DEG2P(90), 30);    // 转90°
 
+  /* OLED 初始化 + 立即显示 0 */
+  oled_init(&hi2c1);
+  oled_set_cursor(0, 0);
+  oled_print("SEC:0");
+  oled_show();
+  /* USER CODE END 2 */
+
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -122,7 +154,9 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     task_poll();
-    Motor_Rx_Process();          // 解析驱动板应答，更新 motor_state
+    oled_tick_display();
+
+    Motor_Rx_Process();          // 解析电机应答，更新 motor_state
 
   }
   /* USER CODE END 3 */
