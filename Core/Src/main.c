@@ -108,6 +108,11 @@ int main(void)
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
   UartDbg_Send(&uart_dbg, "System ready\r\n");
+
+  /* ── 步进电机测试 ── */
+//  Motor_Step_MoveRel(REV2P(1), 1000);     // 转1圈
+//  Motor_Step_MoveRel(DEG2P(90), 30);    // 转90°
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -118,7 +123,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     task_poll();
-    Motor_Rx_Process();          // 解析电机应答，更新 motor_state
+        Motor_Rx_Process();          // 解析电机应答，更新 motor_state
 
   }
   /* USER CODE END 3 */

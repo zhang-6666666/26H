@@ -28,6 +28,9 @@ void Motor_Comm_Init(void)
     fifo_init(&txFIFO);
     fifo_init(&rxFIFO);
     rx_state = RX_WAIT_ADDR;
+
+    /* 使能 RXNE 中断，开始接收驱动板数据 */
+    __HAL_UART_ENABLE_IT(&huart3, UART_IT_RXNE);
 }
 
 /**
@@ -182,13 +185,13 @@ void Motor_Step_SetSpeed(int16_t rpm)
 
 /**
   * @brief  相对位置移动
-  * @param  steps  目标脉冲数（正=CW方向，负=CCW方向）
+  * @param  pulse  脉冲数，正=CW / 负=CCW（1圈=PPR脉冲，可用 REV2P / DEG2P）
   * @param  rpm    运动速度
   */
-void Motor_Step_MoveRel(int32_t steps, uint16_t rpm)
+void Motor_Step_MoveRel(int32_t pulse, uint16_t rpm)
 {
-    uint8_t  dir = (steps >= 0) ? 0 : 1;
-    uint32_t clk = (uint32_t)(steps >= 0 ? steps : -steps);
+    uint8_t  dir = (pulse >= 0) ? 0 : 1;
+    uint32_t clk = (uint32_t)(pulse >= 0 ? pulse : -pulse);
     uint8_t  acc = 10;
 
     Emm_V5_Pos_Control(STEP_MOTOR_ADDR, dir, rpm, acc, clk, false, false);
@@ -196,13 +199,13 @@ void Motor_Step_MoveRel(int32_t steps, uint16_t rpm)
 
 /**
   * @brief  绝对位置移动
-  * @param  pos  目标位置（编码器脉冲数）
-  * @param  rpm  运动速度
+  * @param  pulse  目标位置脉冲数（1圈=PPR脉冲，可用 REV2P / DEG2P）
+  * @param  rpm    运动速度
   */
-void Motor_Step_MoveTo(int32_t pos, uint16_t rpm)
+void Motor_Step_MoveTo(int32_t pulse, uint16_t rpm)
 {
-    uint8_t  dir = (pos >= motor_state.cur_pos) ? 0 : 1;
-    uint32_t clk = (uint32_t)(pos >= motor_state.cur_pos ? (pos - motor_state.cur_pos) : (motor_state.cur_pos - pos));
+    uint8_t  dir = (pulse >= motor_state.cur_pos) ? 0 : 1;
+    uint32_t clk = (uint32_t)(pulse >= motor_state.cur_pos ? (pulse - motor_state.cur_pos) : (motor_state.cur_pos - pulse));
     uint8_t  acc = 10;
 
     Emm_V5_Pos_Control(STEP_MOTOR_ADDR, dir, rpm, acc, clk, true, false);
