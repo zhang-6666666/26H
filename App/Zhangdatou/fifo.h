@@ -27,10 +27,10 @@ typedef struct {
 extern __IO FIFO_t txFIFO;              // 发送 FIFO 实例
 extern __IO FIFO_t rxFIFO;              // 接收 FIFO 实例
 
-void fifo_init(FIFO_t *fifo);                              // 初始化指定 FIFO
-void fifo_enQueue(FIFO_t *fifo, uint16_t data);             // 入队
-uint16_t fifo_deQueue(FIFO_t *fifo);                        // 出队
-bool fifo_isEmpty(FIFO_t *fifo);                            // 判断队列是否为空
-uint16_t fifo_queueLength(FIFO_t *fifo);                    // 获取队列中数据个数
+void fifo_init(volatile FIFO_t *fifo);                              // 初始化指定 FIFO
+void fifo_enQueue(volatile FIFO_t *fifo, uint16_t data);             // 入队
+uint16_t fifo_deQueue(volatile FIFO_t *fifo);                        // 出队
+bool fifo_isEmpty(volatile FIFO_t *fifo);                            // 判断队列是否为空
+uint16_t fifo_queueLength(volatile FIFO_t *fifo);                    // 获取队列中数据个数
 
 #endif

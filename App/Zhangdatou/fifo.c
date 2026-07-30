@@ -16,7 +16,7 @@ __IO FIFO_t rxFIFO = {0};               // 接收 FIFO 实例
   * @brief  初始化指定 FIFO（复位读写指针）
   * @param  fifo  要初始化的 FIFO 指针
   */
-void fifo_init(FIFO_t *fifo)
+void fifo_init(volatile FIFO_t *fifo)
 {
   fifo->ptrRead  = 0;
   fifo->ptrWrite = 0;
@@ -27,7 +27,7 @@ void fifo_init(FIFO_t *fifo)
   * @param  fifo  目标 FIFO 指针
   * @param  data  要存入的数据
   */
-void fifo_enQueue(FIFO_t *fifo, uint16_t data)
+void fifo_enQueue(volatile FIFO_t *fifo, uint16_t data)
 {
   fifo->buffer[fifo->ptrWrite] = data;
 
@@ -45,7 +45,7 @@ void fifo_enQueue(FIFO_t *fifo, uint16_t data)
   * @param  fifo  目标 FIFO 指针
   * @retval 取出的数据
   */
-uint16_t fifo_deQueue(FIFO_t *fifo)
+uint16_t fifo_deQueue(volatile FIFO_t *fifo)
 {
   uint16_t element = 0;
 
@@ -67,7 +67,7 @@ uint16_t fifo_deQueue(FIFO_t *fifo)
   * @param  fifo  目标 FIFO 指针
   * @retval true=空，false=非空
   */
-bool fifo_isEmpty(FIFO_t *fifo)
+bool fifo_isEmpty(volatile FIFO_t *fifo)
 {
   if (fifo->ptrRead == fifo->ptrWrite)
   {
@@ -82,7 +82,7 @@ bool fifo_isEmpty(FIFO_t *fifo)
   * @param  fifo  目标 FIFO 指针
   * @retval 队列中的数据数量
   */
-uint16_t fifo_queueLength(FIFO_t *fifo)
+uint16_t fifo_queueLength(volatile FIFO_t *fifo)
 {
   if (fifo->ptrRead <= fifo->ptrWrite)
   {

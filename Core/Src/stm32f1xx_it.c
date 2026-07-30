@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "uartdbg.h"
+#include "motor_bujin.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -61,6 +62,7 @@ extern TIM_HandleTypeDef htim3;
 extern DMA_HandleTypeDef hdma_usart1_tx;
 extern DMA_HandleTypeDef hdma_usart1_rx;
 extern UART_HandleTypeDef huart1;
+extern UART_HandleTypeDef huart3;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -277,5 +279,26 @@ void USART1_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
+
+/**
+  * @brief This function handles USART3 global interrupt.
+  */
+void USART3_IRQHandler(void)
+{
+    uint32_t sr = huart3.Instance->SR;
+
+    /* TXE: 发送 FIFO 非空 → 写 DR */
+    if ((sr & USART_SR_TXE) && (huart3.Instance->CR1 & USART_CR1_TXEIE)) {
+        Motor_Tx_Process();
+    }
+
+    /* RXNE: 收到字节 → 压入接收 FIFO */
+    if ((sr & USART_SR_RXNE) && (huart3.Instance->CR1 & USART_CR1_RXNEIE)) {
+        uint8_t byte = (uint8_t)(huart3.Instance->DR & 0xFF);
+        Motor_Rx_Handler(byte);
+    }
+
+    HAL_UART_IRQHandler(&huart3);
+}
 
 /* USER CODE END 1 */

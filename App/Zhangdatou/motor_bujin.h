@@ -3,6 +3,11 @@
 
 #include "main.h"
 
+/* ── 步进电机参数 ────────────────────────────────────────── */
+#define PPR                   51200                       // 每圈脉冲数 (128细分 × 400步/圈)
+#define DEG2P(a)              ((a) * PPR / 360)           // 角度→脉冲
+#define REV2P(r)              ((r) * PPR)                 // 圈数→脉冲
+
 /* ── 步进电机驱动地址（单驱动器默认 0） ────────────────── */
 #define STEP_MOTOR_ADDR       0
 
@@ -30,8 +35,8 @@ void Motor_Rx_Process(void);                    // 接收解析：从 RX_FIFO �
 /* ── 步进电机简易控制接口 ─────────────────────────────── */
 void Motor_Step_Init(void);                     // 上电初始化：通信→闭环模式→使能
 void Motor_Step_SetSpeed(int16_t rpm);          // 速度模式：正=CW，负=CCW，0=停止
-void Motor_Step_MoveRel(int32_t steps, uint16_t rpm);   // 相对位置移动（steps 为脉冲数）
-void Motor_Step_MoveTo(int32_t pos, uint16_t rpm);      // 绝对位置移动（pos 为脉冲数）
+void Motor_Step_MoveRel(int32_t pulse, uint16_t rpm);   // 相对位置移动（pulse 为脉冲数，用 REV2P/DEG2P 转换）
+void Motor_Step_MoveTo(int32_t pulse, uint16_t rpm);    // 绝对位置移动（pulse 为脉冲数，用 REV2P/DEG2P 转换）
 void Motor_Step_Stop(void);                     // 减速停止
 void Motor_Step_EmergencyStop(void);             // 紧急停止（直接失能电机）
 

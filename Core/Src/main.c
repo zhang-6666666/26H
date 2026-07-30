@@ -39,7 +39,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define STEPPER_PPR  48000  /* 一圈对应脉冲数（4000→30°，按比例推算=48000）*/
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -103,12 +103,16 @@ int main(void)
   MX_ADC1_Init();
   MX_USART2_UART_Init();
   MX_USART3_UART_Init();
+  Motor_Step_Init();
   /* USER CODE BEGIN 2 */
 
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
   UartDbg_Send(&uart_dbg, "System ready\r\n");
-  /* USER CODE END 2 */
+
+  /* ── 步进电机测试 ── */
+//  Motor_Step_MoveRel(REV2P(1), 1000);     // 转1圈
+//  Motor_Step_MoveRel(DEG2P(90), 30);    // 转90°
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
@@ -118,7 +122,7 @@ int main(void)
 
     /* USER CODE BEGIN 3 */
     task_poll();
-    Motor_Rx_Process();          // 解析电机应答，更新 motor_state
+    Motor_Rx_Process();          // 解析驱动板应答，更新 motor_state
 
   }
   /* USER CODE END 3 */
