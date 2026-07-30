@@ -21,65 +21,10 @@ static void cmd_help(const char *args)
 {
     (void)args;
     UartDbg_Send(&uart_dbg,
-        "spd=left,right     set speed targets (cm/s)\r\n"
-        "pida=kp,ki,kd      set motor A speed PID\r\n"
-        "pidb=kp,ki,kd      set motor B speed PID\r\n"
-        "vofa=0/1           disable/enable VOFA+ data stream\r\n"
-        "mode=stop|speed|line  control mode\r\n"
         "ping               check connection\r\n"
         "help               this list\r\n");
 }
 
-static void cmd_spd(const char *args)
-{
-    float a, b;
-    if (sscanf(args, "%f,%f", &a, &b) == 2) {
-        control_set_speed(a, b);
-        UartDbg_Send(&uart_dbg, "spd=%.1f,%.1f\r\n", a, b);
-    } else {
-        UartDbg_Send(&uart_dbg, "usage: spd=left,right\r\n");
-    }
-}
-
-static void cmd_pid_set(const char *args, float kp, float ki, float kd,
-                        void (*setter)(float, float, float), const char *name)
-{
-    if (sscanf(args, "%f,%f,%f", &kp, &ki, &kd) == 3) {
-        setter(kp, ki, kd);
-        UartDbg_Send(&uart_dbg, "%s=%.2f,%.2f,%.2f\r\n", name, kp, ki, kd);
-    } else {
-        UartDbg_Send(&uart_dbg, "usage: %s=kp,ki,kd\r\n", name);
-    }
-}
-
-static void cmd_pida(const char *args)
-{
-    cmd_pid_set(args, 0, 0, 0, control_set_pid_speed_a, "pida");
-}
-
-static void cmd_pidb(const char *args)
-{
-    cmd_pid_set(args, 0, 0, 0, control_set_pid_speed_b, "pidb");
-}
-
-static void cmd_vofa(const char *args)
-{
-    int v;
-    if (sscanf(args, "%d", &v) == 1) {
-        g_vofa_enable = (v != 0);
-        UartDbg_Send(&uart_dbg, "vofa=%d\r\n", g_vofa_enable);
-    } else {
-        UartDbg_Send(&uart_dbg, "usage: vofa=0 or vofa=1\r\n");
-    }
-}
-
-static void cmd_mode(const char *args)
-{
-    if (strcmp(args, "stop") == 0)  { control_set_mode(CTRL_STOP);  UartDbg_Send(&uart_dbg, "mode=stop\r\n");  return; }
-    if (strcmp(args, "speed") == 0) { control_set_mode(CTRL_SPEED); UartDbg_Send(&uart_dbg, "mode=speed\r\n"); return; }
-    if (strcmp(args, "line") == 0)  { control_set_mode(CTRL_LINE);  UartDbg_Send(&uart_dbg, "mode=line\r\n");  return; }
-    UartDbg_Send(&uart_dbg, "usage: mode=stop|speed|line\r\n");
-}
 
 /* ===================== 命令表 ===================== */
 
@@ -91,11 +36,6 @@ typedef struct {
 static const CmdEntry s_cmds[] = {
     {"ping",  cmd_ping},
     {"help",  cmd_help},
-    {"spd",   cmd_spd},
-    {"pida",  cmd_pida},
-    {"pidb",  cmd_pidb},
-    {"vofa",  cmd_vofa},
-    {"mode",  cmd_mode},
 };
 
 void CmdHandler_Process(const char *line)
@@ -122,19 +62,3 @@ void CmdHandler_Process(const char *line)
     UartDbg_Send(&uart_dbg, "unknown cmd: %s\r\n", line);
 }
 
-/* ===================== VOFA+ JustFloat 数据发送 ===================== */
-
-void CmdHandler_SendVofa(void)
-{
-    if (!g_vofa_enable) return;
-
-    float data[6];
-    data[0] = 0.0f;                                   /* yaw (removed) */
-    data[1] = 0.0f;                                   /* yaw target (removed) */
-    data[2] = encoder_left.speed_cm_s;              /* 左轮速度 */
-    data[3] = encoder_right.speed_cm_s;             /* 右轮速度 */
-    data[4] = control_get_pwm_a();                  /* 左轮 PWM */
-    data[5] = control_get_pwm_b();                  /* 右轮 PWM */
-
-    UartDbg_SendFloat(&uart_dbg, data, 6);
-}

@@ -1,4 +1,4 @@
-/* 任务调度 — 1ms 系统节拍 + 多任务轮询 */
+/* 任务调度 */
 #ifndef TASK_H
 #define TASK_H
 

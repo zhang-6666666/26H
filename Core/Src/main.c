@@ -27,8 +27,6 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "motor.h"
-#include "encoder.h"
 #include "task.h"
 #include "uartdbg.h"
 #include "oled.h"
@@ -127,6 +125,7 @@ int main(void)
   MX_TIM3_Init();
   MX_TIM4_Init();
   MX_ADC1_Init();
+  MX_USART2_UART_Init();
   MX_USART3_UART_Init();
   Motor_Step_Init();
 
