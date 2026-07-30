@@ -2,11 +2,17 @@
 #include "line_follow.h"
 #include "gray.h"
 
-#define KP  2.0f
-#define KD  0.08f        /* KD 越大抑制震荡越强，但太大响应迟钝 */
+#define KP  4.0f
+#define KD  0.07f        /* KD 越大抑制震荡越强，但太大响应迟钝 */
 
 static float s_last_steer;
 static int8_t s_last_pos = 127;
+
+void LineFollow_Reset(void)
+{
+    s_last_steer = 0.0f;
+    s_last_pos   = 127;
+}
 
 float LineFollow_Update(void)
 {

@@ -21,13 +21,18 @@
 #define OLED_INTERVAL   200   /* OLED 刷新周期 (ms) */
 
 /* ===================== 内部状态 ===================== */
-static volatile uint32_t s_tick;          /* 1ms 节拍 */
+volatile uint32_t s_tick;          /* 1ms 节拍，供外部读取 */
+volatile uint32_t s_task_tick;     /* 任务计时，受 enable 控制 */
+volatile uint8_t  s_task_timer_on; /* 1=计时中 */
 static uint32_t s_last_send, s_last_pid, s_last_key, s_last_oled;
 
 /* ===================== ISR ===================== */
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance == TIM3) s_tick++;
+    if (htim->Instance == TIM3) {
+        s_tick++;
+        if (s_task_timer_on) s_task_tick++;
+    }
 }
 
 /* ===================== 初始化 ===================== */
@@ -79,7 +84,7 @@ void task_poll(void)
     /* 按键 */
     if (s_tick - s_last_key >= KEY_INTERVAL) {
         s_last_key = s_tick;
-        Key_Tick();
+        Key_Edge_Scan();
     }
 
     /* 任务调度 + PID 控制 */
@@ -92,30 +97,25 @@ void task_poll(void)
     /* OLED */
     if (s_tick - s_last_oled >= OLED_INTERVAL) {
         s_last_oled = s_tick;
+        oled_clear();
 
         uint8_t run = Question_Running();
-        uint8_t sel = Question_Selected();
 
-        /* 第一行：状态 + 任务名 */
+        /* 第一行：模式 */
         oled_set_cursor(0, 0);
         if (run != 0xFF) {
             oled_print("R:");
             oled_print(Question_Name(run));
         } else {
             oled_print("S:");
-            oled_print(Question_Name(sel));
+            oled_print(Question_Name(Question_Selected()));
         }
 
-        /* 第二行：运行秒数 */
-        oled_set_cursor(1, 0);
+        /* 第二行：任务计时 */
+        oled_set_cursor(0, 1);
         oled_print("T:");
-        char num[6];
-        uint32_t v = s_tick / 1000;
-        uint8_t i = sizeof(num) - 1;
-        num[i--] = '\0';
-        if (v == 0) num[i--] = '0';
-        else while (v) { num[i--] = '0' + (v % 10); v /= 10; }
-        oled_print(&num[i + 1]);
+        oled_print_uint(s_task_tick / 1000);
+        oled_print("s");
 
         oled_show();
     }

@@ -16,5 +16,6 @@ void oled_clear(void);                          /* 清显存（不刷新） */
 void oled_set_cursor(uint8_t x, uint8_t y);     /* 打印位置 x:0~127, y:行号0~7 */
 void oled_print(const char *str);               /* 当前位置打印 ASCII 字符串 */
 void oled_show(void);                           /* 全屏刷新到 OLED */
+void oled_print_uint(uint32_t v);               /* 打印无符号整数 */
 
 #endif

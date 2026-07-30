@@ -4,6 +4,14 @@
 Encoder encoder_left;
 Encoder encoder_right;
 
+void Encoder_Reset(Encoder *enc)
+{
+    enc->count       = 0;
+    enc->total_count = 0;
+    enc->speed_cm_s  = 0.0f;
+    __HAL_TIM_SetCounter(enc->htim, 0);
+}
+
 void Encoder_Init(Encoder *enc, TIM_HandleTypeDef *htim, uint8_t reverse)
 {
     enc->htim     = htim;

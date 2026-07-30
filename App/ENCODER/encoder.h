@@ -18,6 +18,7 @@ typedef struct {
 } Encoder;
 
 void Encoder_Init(Encoder *enc, TIM_HandleTypeDef *htim, uint8_t reverse);
+void Encoder_Reset(Encoder *enc);
 void Encoder_Update(Encoder *enc);
 
 extern Encoder encoder_left;

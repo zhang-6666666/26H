@@ -33,7 +33,6 @@
 extern volatile uint8_t key_flag[KEY_NUM];
 
 void Key_Edge_Scan(void);
-void Key_Tick(void);
 uint8_t Key_Check(uint8_t Flag);
 
 #endif /* __KEY_H */

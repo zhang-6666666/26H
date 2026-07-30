@@ -6,7 +6,7 @@
 #include "line_follow.h"
 #include "gray.h"
 
-#define STOP_CNT  4    /* ≥3 路黑线 → 停车 */
+#define STOP_CNT  3    /* ≥3 路黑线 → 停车 */
 
 static PID_T pid_speed_a, pid_speed_b;
 static float base_speed_a, base_speed_b;
@@ -15,12 +15,16 @@ static CtrlMode s_mode = CTRL_LINE;
 
 void control_init(CtrlMode mode, float speed_l, float speed_r)
 {
-    s_mode      = mode;
-    base_speed_a = speed_l;
-    base_speed_b = speed_r;
-
+    /* 清零所有状态，每次启动任务都是冷启动 */
+    Encoder_Reset(&encoder_left);
+    Encoder_Reset(&encoder_right);
+    LineFollow_Reset();
     pid_init(&pid_speed_a, 12.0f, 0.3f, 0.0f, 0.0f, 1000.0f);
     pid_init(&pid_speed_b, 12.0f, 0.3f, 0.0f, 0.0f, 1000.0f);
+
+    s_mode       = mode;
+    base_speed_a = speed_l;
+    base_speed_b = speed_r;
 }
 
 void control_update(void)

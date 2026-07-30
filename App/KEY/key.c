@@ -88,13 +88,3 @@ uint8_t Key_Check(uint8_t Flag)
     return 0;
 }
 
-void Key_Tick(void)
-{
-    static uint8_t Count;
-
-    Count++;
-    if (Count >= 20) {
-        Count = 0;
-        Key_Edge_Scan();
-    }
-}

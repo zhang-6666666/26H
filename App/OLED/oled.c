@@ -148,6 +148,16 @@ void oled_print(const char *str)
 
 /* ===================== 快捷方法 ===================== */
 
+void oled_print_uint(uint32_t v)
+{
+    char buf[11];                          /* 最大 10 位 + \0 */
+    uint8_t i = sizeof(buf) - 1;
+    buf[i--] = '\0';
+    if (v == 0) buf[i--] = '0';
+    else while (v) { buf[i--] = '0' + (v % 10); v /= 10; }
+    oled_print(&buf[i + 1]);
+}
+
 void oled_show_string(uint8_t line, const char *str)
 {
     oled_clear();

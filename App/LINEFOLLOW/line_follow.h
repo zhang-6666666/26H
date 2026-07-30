@@ -3,5 +3,6 @@
 #define LINE_FOLLOW_H
 
 float LineFollow_Update(void);
+void  LineFollow_Reset(void);
 
 #endif
