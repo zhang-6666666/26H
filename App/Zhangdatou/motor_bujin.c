@@ -1,6 +1,7 @@
 #include "motor_bujin.h"
 #include "Emm_V5.h"
 #include "fifo.h"
+#include <stdbool.h>
 
 /* ── 外部串口句柄 ─────────────────────────────────────── */
 extern UART_HandleTypeDef huart3;

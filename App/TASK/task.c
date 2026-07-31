@@ -7,6 +7,7 @@
 #include "i2c.h"
 #include "key.h"
 #include "motor.h"
+#include "motor_bujin.h"
 #include "oled.h"
 #include "question.h"
 #include "tim.h"
@@ -42,9 +43,8 @@ void task_init(void)
     HAL_TIM_Base_Start_IT(&htim3);
     UartDbg_Init(&uart_dbg, &huart1, &hdma_usart1_tx, &hdma_usart1_rx);
     UartDbg_SetCmdCb(&uart_dbg, CmdHandler_Process);
-
     oled_init(&hi2c1);
-
+    Motor_Step_Init();
     Question_Init();
     control_init(CTRL_STOP, 0, 0);    /* 初始停止态 */
     Encoder_Init(&encoder_left,  &htim2, 1);
@@ -120,4 +120,7 @@ void task_poll(void)
 
         oled_show();
     }
+
+    /* 电机应答解析：每轮都跑，FIFO 空时几乎零开销 */
+    Motor_Rx_Process();
 }
