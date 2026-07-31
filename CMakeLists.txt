@@ -61,6 +61,8 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Zhangdatou/fifo.c
     App/Zhangdatou/Emm_V5.c
     App/Zhangdatou/motor_bujin.c
+    App/BALANCE/balance.c
+    App/CAMERA/camera.c
 )
 
 # Add include paths
@@ -80,6 +82,8 @@ target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE
     App/KEY
     App/QUESTION
     App/Zhangdatou
+    App/BALANCE
+    App/CAMERA
 )
 
 # Add project symbols (macros)
