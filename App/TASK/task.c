@@ -40,11 +40,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 /* ===================== 初始化 ===================== */
 void task_init(void)
 {
+    Motor_Step_Init();
     HAL_TIM_Base_Start_IT(&htim3);
     UartDbg_Init(&uart_dbg, &huart1, &hdma_usart1_tx, &hdma_usart1_rx);
     UartDbg_SetCmdCb(&uart_dbg, CmdHandler_Process);
     oled_init(&hi2c1);
-    Motor_Step_Init();
     Question_Init();
     control_init(CTRL_STOP, 0, 0);    /* 初始停止态 */
     Encoder_Init(&encoder_left,  &htim2, 1);

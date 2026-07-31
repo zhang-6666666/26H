@@ -111,7 +111,7 @@ int main(void)
 
   /* ── 步进电机测试 ── */
 //  Motor_Step_MoveRel(REV2P(1), 1000);     // 转1圈
-  Motor_Step_MoveRel(DEG2P(90), 30); // 转90°
+  // Motor_Step_MoveRel(DEG2P(90), 30); // 转90°
 
   /* USER CODE END 2 */
 
