@@ -7,7 +7,7 @@
 #define ENCODER_PPR          1060    /* 13线/相, 20倍减速比, 4倍频 */
 #define WHEEL_DIAMETER_CM     4.8f   /* 轮径 (cm) */
 #define WHEEL_CIRCUMFERENCE_CM (WHEEL_DIAMETER_CM * 3.14159265f)
-#define SAMPLING_TIME_S        0.050f /* 采样周期 (s) */
+#define SAMPLING_TIME_S        0.020f /* 采样周期 (s) */
 
 typedef struct {
     TIM_HandleTypeDef *htim;

@@ -63,6 +63,7 @@ target_sources(${CMAKE_PROJECT_NAME} PRIVATE
     App/Zhangdatou/motor_bujin.c
     App/BALANCE/balance.c
     App/CAMERA/camera.c
+    App/CAMERA/camera_protocol.c
 )
 
 # Add include paths

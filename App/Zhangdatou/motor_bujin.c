@@ -200,13 +200,15 @@ void Motor_Step_MoveRel(int32_t pulse, uint16_t rpm)
 
 /**
   * @brief  绝对位置移动
-  * @param  pulse  目标位置脉冲数（1圈=PPR脉冲，可用 REV2P / DEG2P）
+  * @param  pulse  相对原点的有符号绝对位置脉冲数
   * @param  rpm    运动速度
   */
 void Motor_Step_MoveTo(int32_t pulse, uint16_t rpm)
 {
-    uint8_t  dir = (pulse >= motor_state.cur_pos) ? 0 : 1;
-    uint32_t clk = (uint32_t)(pulse >= motor_state.cur_pos ? (pulse - motor_state.cur_pos) : (motor_state.cur_pos - pulse));
+    uint8_t  dir = (pulse >= 0) ? 0 : 1;
+    uint32_t clk = (pulse >= 0)
+                       ? (uint32_t)pulse
+                       : (uint32_t)(-(pulse + 1)) + 1U;
     uint8_t  acc = 10;
 
     Emm_V5_Pos_Control(STEP_MOTOR_ADDR, dir, rpm, acc, clk, true, false);

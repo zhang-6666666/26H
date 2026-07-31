@@ -19,7 +19,7 @@
 
 /* ===================== 常量 ===================== */
 #define SEND_INTERVAL   100   /* 调试输出周期 (ms) */
-#define PID_INTERVAL    50    /* 控制计算周期 (ms) */
+#define PID_INTERVAL    20    /* 控制计算周期 (ms) */
 #define KEY_INTERVAL    10    /* 按键扫描周期 (ms) */
 #define OLED_INTERVAL   200   /* OLED 刷新周期 (ms) */
 
@@ -29,6 +29,9 @@ volatile uint32_t s_task_tick;     /* 任务计时，受 enable 控制 */
 volatile uint8_t  s_task_timer_on; /* 1=计时中 */
 static uint32_t s_last_send, s_last_pid, s_last_key, s_last_oled;
 static BalanceCtrl s_ball;
+static CameraData s_camera_latest;
+static uint8_t s_camera_pending;
+static uint8_t s_balance_vision_active;
 
 
 /* ===================== ISR ===================== */
@@ -51,6 +54,8 @@ void task_init(void)
     oled_init(&hi2c1);
     Question_Init();
     Balance_Init(&s_ball);
+    s_camera_pending = 0U;
+    s_balance_vision_active = 0U;
     control_init(CTRL_STOP, 0, 0);    /* 初始停止态 */
     Encoder_Init(&encoder_left,  &htim2, 1);
     Encoder_Init(&encoder_right, &htim4, 0);
@@ -72,12 +77,38 @@ void task_init(void)
 /* ===================== 主循环轮询 ===================== */
 void task_poll(void)
 {
+    CameraData received;
+
     UartDbg_Poll(&uart_dbg);
 
-    /* 摄像头位置打印 */
+    /* Move a verified ISR frame into main-loop ownership. */
+    if (Camera_Take(&received)) {
+        s_camera_latest = received;
+        s_camera_pending = 1U;
+    }
+
+    /* Vision link diagnostics on the independent USART1 debug port. */
     if (s_tick - s_last_send >= SEND_INTERVAL) {
+        CameraData debug_sample;
+        uint32_t age_ms;
+        Camera_Peek(&debug_sample);
+        age_ms = debug_sample.received
+                     ? (HAL_GetTick() - debug_sample.last_rx_ms)
+                     : 0xFFFFFFFFU;
         s_last_send = s_tick;
-        UartDbg_Send(&uart_dbg, "BALL pos=%d mm\r\n", camera.pos_mm);
+        UartDbg_Send(
+            &uart_dbg,
+            "BALL ok=%u p=%d v=%d vt=%d mp=%ld age=%lu err=%lu/%lu/%lu\r\n",
+            debug_sample.valid,
+            debug_sample.pos_mm,
+            debug_sample.vel_mm_s,
+            (int)s_ball.target_vel,
+            (long)s_ball.target_pulse,
+            (unsigned long)age_ms,
+            (unsigned long)debug_sample.checksum_errors,
+            (unsigned long)debug_sample.format_errors,
+            (unsigned long)debug_sample.sequence_errors
+        );
     }
 
     /* 按键 */
@@ -92,10 +123,24 @@ void task_poll(void)
         Question_Update();
         control_update();
 
-        /* 钢球平衡 */
-        if (camera.fresh) {
-            camera.fresh = 0;
-            Balance_Update(&s_ball, (float)camera.pos_mm);
+        /* Update only from a new checksummed frame. */
+        if (s_camera_pending) {
+            s_camera_pending = 0U;
+            if (s_camera_latest.valid && Camera_IsUsable(HAL_GetTick())) {
+                Balance_Update(&s_ball,
+                               (float)s_camera_latest.pos_mm,
+                               (float)s_camera_latest.vel_mm_s);
+                s_balance_vision_active = 1U;
+            } else if (s_balance_vision_active) {
+                Balance_VisionLost(&s_ball);
+                s_balance_vision_active = 0U;
+            }
+        }
+
+        /* A broken wire or stopped K230 also enters the safe state. */
+        if (s_balance_vision_active && !Camera_IsUsable(HAL_GetTick())) {
+            Balance_VisionLost(&s_ball);
+            s_balance_vision_active = 0U;
         }
     }
 

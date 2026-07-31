@@ -36,7 +36,7 @@ void Motor_Rx_Process(void);                    // 接收解析：从 RX_FIFO �
 void Motor_Step_Init(void);                     // 上电初始化：通信→闭环模式→使能
 void Motor_Step_SetSpeed(int16_t rpm);          // 速度模式：正=CW，负=CCW，0=停止
 void Motor_Step_MoveRel(int32_t pulse, uint16_t rpm);   // 相对位置移动（pulse 为脉冲数，用 REV2P/DEG2P 转换）
-void Motor_Step_MoveTo(int32_t pulse, uint16_t rpm);    // 绝对位置移动（pulse 为脉冲数，用 REV2P/DEG2P 转换）
+void Motor_Step_MoveTo(int32_t pulse, uint16_t rpm);    // 移动到相对原点的有符号绝对脉冲位置
 void Motor_Step_Stop(void);                     // 减速停止
 void Motor_Step_EmergencyStop(void);             // 紧急停止（直接失能电机）
 
