@@ -4,9 +4,9 @@
 #include "stm32f1xx_hal.h"
 
 /* ── 按键参数宏 ─────────────────────────────────────────── */
-#define KEY_SCAN_MS           20    /* 扫描周期 (ms)，与 Key_Tick 内 Count 阈值一致  */
-#define KEY_LONG_PRESS_MS    2000   /* 长按判定阈值 (ms)                             */
-#define KEY_REPEAT_PRESS_MS   200   /* 长按重复间隔 (ms)                             */
+#define KEY_SCAN_MS           10    /* 扫描周期 (ms)                         */
+#define KEY_LONG_PRESS_MS    2000   /* 长按判定阈值 (ms)                     */
+#define KEY_REPEAT_PRESS_MS   200   /* 长按重复间隔 (ms)                     */
 
 /* 转换为扫描次数 */
 #define KEY_LONG_PRESS_CNT    (KEY_LONG_PRESS_MS   / KEY_SCAN_MS)
@@ -19,20 +19,23 @@
 #define KEY_KEY_2_PIN       GPIO_PIN_5
 #define KEY_KEY_3_PORT      GPIOA
 #define KEY_KEY_3_PIN       GPIO_PIN_12
-#define KEY_NUM              3      /* 按键数量                       */
+#define KEY_NUM              3      /* 按键数量                             */
 
-/* ── 按键标志位定义（位掩码宏定义） ──────────────────────────────────── */
-#define KEY_FLAG_HOLD    0x01   /* Bit 0: 按住中                   */
-#define KEY_FLAG_DOWN    0x02   /* Bit 1: 按下瞬间                 */
-#define KEY_FLAG_UP      0x04   /* Bit 2: 释放瞬间                 */
-#define KEY_FLAG_SINGLE  0x08   /* Bit 3: 单击                     */
-#define KEY_FLAG_LONG    0x20   /* Bit 5: 长按                     */
-#define KEY_FLAG_REPEAT  0x40   /* Bit 6: 重复                     */
+/* ── 按键状态（位域结构体，替代位掩码宏） ──────────────────────── */
+typedef struct {
+    uint8_t hold       : 1;   /* Bit 0: 按住中                             */
+    uint8_t down       : 1;   /* Bit 1: 按下瞬间                           */
+    uint8_t up         : 1;   /* Bit 2: 释放瞬间                           */
+    uint8_t single     : 1;   /* Bit 3: 单击                               */
+    uint8_t long_press : 1;   /* Bit 5: 长按                               */
+    uint8_t repeat     : 1;   /* Bit 6: 重复                               */
+} Key_State;
 
-/* ── 按键标志数组 (每个键一个字节, 按位使用) ────────── */
-extern volatile uint8_t key_flag[KEY_NUM];
+/* ── 按键状态数组 ──────────────────────────────────────────── */
+extern volatile Key_State key[KEY_NUM];
 
+/* ── API ──────────────────────────────────────────────────── */
 void Key_Edge_Scan(void);
-uint8_t Key_Check(uint8_t Flag);
+void Key_Read(uint8_t i, Key_State *out);   /* 读取并清除一次性标志       */
 
 #endif /* __KEY_H */

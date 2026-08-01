@@ -11,7 +11,6 @@ typedef struct {
     void     (*run)(void);            /* 任务回调，内部自己处理启停 */
 } TaskDef;
 
-#define TASK_MAX  8
 
 void Question_Init(void);
 void Question_Update(void);

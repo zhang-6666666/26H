@@ -284,18 +284,18 @@ void USART1_IRQHandler(void)
 void USART3_IRQHandler(void)
 {
   /* USER CODE BEGIN USART3_IRQn 0 */
-  uint32_t sr = huart3.Instance->SR;
+    uint32_t sr = huart3.Instance->SR;
 
-  /* TXE: 发送 FIFO 非空 → 写 DR */
-  if ((sr & USART_SR_TXE) && (huart3.Instance->CR1 & USART_CR1_TXEIE)) {
-    Motor_Tx_Process();
-  }
+    /* TXE: 发送 FIFO 非空 → 写 DR */
+    if ((sr & USART_SR_TXE) && (huart3.Instance->CR1 & USART_CR1_TXEIE)) {
+        Motor_Tx_Process();
+    }
 
-  /* RXNE: 收到字节 → 压入接收 FIFO */
-  if ((sr & USART_SR_RXNE) && (huart3.Instance->CR1 & USART_CR1_RXNEIE)) {
-    uint8_t byte = (uint8_t)(huart3.Instance->DR & 0xFF);
-    Motor_Rx_Handler(byte);
-  }
+    /* RXNE: 收到字节 → 压入接收 FIFO */
+    if ((sr & USART_SR_RXNE) && (huart3.Instance->CR1 & USART_CR1_RXNEIE)) {
+        uint8_t byte = (uint8_t)(huart3.Instance->DR & 0xFF);
+        Motor_Rx_Handler(byte);
+    }
   /* USER CODE END USART3_IRQn 0 */
   HAL_UART_IRQHandler(&huart3);
   /* USER CODE BEGIN USART3_IRQn 1 */
@@ -304,10 +304,5 @@ void USART3_IRQHandler(void)
 }
 
 /* USER CODE BEGIN 1 */
-
-/**
-  * @brief This function handles USART3 global interrupt.
-  */
-
 
 /* USER CODE END 1 */
