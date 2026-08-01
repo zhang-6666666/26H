@@ -87,27 +87,16 @@ void task_poll(void)
         s_camera_pending = 1U;
     }
 
-    /* Vision link diagnostics on the independent USART1 debug port. */
+    /* USART1 debug output: received position and velocity only. */
     if (s_tick - s_last_send >= SEND_INTERVAL) {
         CameraData debug_sample;
-        uint32_t age_ms;
         Camera_Peek(&debug_sample);
-        age_ms = debug_sample.received
-                     ? (HAL_GetTick() - debug_sample.last_rx_ms)
-                     : 0xFFFFFFFFU;
         s_last_send = s_tick;
         UartDbg_Send(
             &uart_dbg,
-            "BALL ok=%u p=%d v=%d vt=%d mp=%ld age=%lu err=%lu/%lu/%lu\r\n",
-            debug_sample.valid,
+            "P=%d V=%d\r\n",
             debug_sample.pos_mm,
-            debug_sample.vel_mm_s,
-            (int)s_ball.target_vel,
-            (long)s_ball.target_pulse,
-            (unsigned long)age_ms,
-            (unsigned long)debug_sample.checksum_errors,
-            (unsigned long)debug_sample.format_errors,
-            (unsigned long)debug_sample.sequence_errors
+            debug_sample.vel_mm_s
         );
     }
 
@@ -126,6 +115,7 @@ void task_poll(void)
         /* Update only from a new checksummed frame. */
         if (s_camera_pending) {
             s_camera_pending = 0U;
+            Balance_SetTarget(&s_ball, (float)s_camera_latest.target_mm);
             if (s_camera_latest.valid && Camera_IsUsable(HAL_GetTick())) {
                 Balance_Update(&s_ball,
                                (float)s_camera_latest.pos_mm,

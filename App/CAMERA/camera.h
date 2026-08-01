@@ -9,6 +9,7 @@
 typedef struct {
     int16_t pos_mm;                 /* 中心=0，左负右正 */
     int16_t vel_mm_s;
+    int16_t target_mm;              /* K230 task target */
     uint16_t confidence_permille;   /* 0..1000 */
     uint16_t seq;
     uint32_t k230_timestamp_ms;

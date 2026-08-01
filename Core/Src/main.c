@@ -107,7 +107,6 @@ int main(void)
 
   /* 任务调度：1ms 节拍 + DMA 发送 + 电机 FSM */
   task_init();
-  UartDbg_Send(&uart_dbg, "System ready\r\n");
   // Motor_Step_EmergencyStop();  /* 上电后立即失能电机，避免意外碰撞 */
       /* ── 步进电机测试 ── */
       //  Motor_Step_MoveRel(REV2P(1), 1000);     // 转1圈

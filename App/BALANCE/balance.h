@@ -6,12 +6,12 @@
 #include "pid.h"
 
 /* 调参区：电机上电回零后，0 脉冲对应杆水平。 */
-#define BALANCE_KP_POS                    1.10f
-#define BALANCE_KP_VEL                   25.0f
-#define BALANCE_TARGET_VEL_LIMIT_MM_S    100.0f
+#define BALANCE_KP_POS                    1.90f
+#define BALANCE_KP_VEL                   20.0f
+#define BALANCE_TARGET_VEL_LIMIT_MM_S    400.0f
 #define BALANCE_LEVEL_PULSE              0L
-#define BALANCE_MAX_PULSE_OFFSET         300L
-#define BALANCE_MOTOR_RPM                 500U
+#define BALANCE_MAX_PULSE_OFFSET         590L
+#define BALANCE_MOTOR_RPM                 700U
 #define BALANCE_MOTOR_SIGN                1L
 
 typedef struct {
@@ -26,6 +26,7 @@ typedef struct {
 } BalanceCtrl;
 
 void Balance_Init(BalanceCtrl *b);
+void Balance_SetTarget(BalanceCtrl *b, float target_pos_mm);
 void Balance_Update(BalanceCtrl *b, float cur_pos_mm, float cur_vel_mm_s);
 void Balance_VisionLost(BalanceCtrl *b);
 

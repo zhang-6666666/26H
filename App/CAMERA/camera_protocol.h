@@ -5,6 +5,7 @@
 #include <stdint.h>
 
 #define CAMERA_PROTOCOL_PAYLOAD_MAX  63U
+#define CAMERA_PROTOCOL_TARGET_LIMIT_MM  125
 
 typedef struct {
     uint16_t seq;
@@ -13,6 +14,7 @@ typedef struct {
     int16_t pos_mm;
     int16_t vel_mm_s;
     uint16_t confidence_permille;
+    int16_t target_mm;
 } CameraProtocolFrame;
 
 typedef enum {

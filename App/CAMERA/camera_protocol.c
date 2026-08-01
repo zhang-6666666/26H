@@ -1,6 +1,6 @@
 /*
  * Streaming parser for:
- *   $B,seq,t_ms,valid,x_mm,v_mm_s,confidence*CS\r\n
+ *   $B,seq,t_ms,valid,x_mm,v_mm_s,confidence,target_mm*CS\r\n
  * CS is the XOR of every payload byte between '$' and '*'.  A '$' received in
  * any state immediately starts a new frame, so line noise or a reset cannot
  * leave the receiver permanently misaligned.
@@ -129,6 +129,7 @@ static uint8_t parse_payload(const char *payload,
     uint32_t confidence;
     int16_t pos_mm;
     int16_t vel_mm_s;
+    int16_t target_mm;
 
     if (frame == NULL || payload_len < 3U || payload[0] != 'B' || payload[1] != ',') {
         return 0U;
@@ -140,12 +141,17 @@ static uint8_t parse_payload(const char *payload,
         !parse_u32(&cursor, end, ',', 1U, &valid) ||
         !parse_i16(&cursor, end, ',', &pos_mm) ||
         !parse_i16(&cursor, end, ',', &vel_mm_s) ||
-        !parse_u32(&cursor, end, '\0', 1000U, &confidence)) {
+        !parse_u32(&cursor, end, ',', 1000U, &confidence) ||
+        !parse_i16(&cursor, end, '\0', &target_mm)) {
         return 0U;
     }
 
     /* Invalid measurements are required to carry zero data. */
     if (valid == 0U && (pos_mm != 0 || vel_mm_s != 0 || confidence != 0U)) {
+        return 0U;
+    }
+    if (target_mm < -CAMERA_PROTOCOL_TARGET_LIMIT_MM ||
+        target_mm > CAMERA_PROTOCOL_TARGET_LIMIT_MM) {
         return 0U;
     }
 
@@ -155,6 +161,7 @@ static uint8_t parse_payload(const char *payload,
     frame->pos_mm = pos_mm;
     frame->vel_mm_s = vel_mm_s;
     frame->confidence_permille = (uint16_t)confidence;
+    frame->target_mm = target_mm;
     return 1U;
 }
 

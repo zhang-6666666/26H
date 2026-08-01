@@ -31,6 +31,11 @@ void Balance_Init(BalanceCtrl *b)
     b->target_pulse = BALANCE_LEVEL_PULSE;
 }
 
+void Balance_SetTarget(BalanceCtrl *b, float target_pos_mm)
+{
+    b->target_pos = target_pos_mm;
+}
+
 void Balance_Update(BalanceCtrl *b, float cur_pos_mm, float cur_vel_mm_s)
 {
     float raw_pulse_offset;

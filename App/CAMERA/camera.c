@@ -10,6 +10,7 @@ static void camera_copy(CameraData *sample)
 {
     sample->pos_mm = camera.pos_mm;
     sample->vel_mm_s = camera.vel_mm_s;
+    sample->target_mm = camera.target_mm;
     sample->confidence_permille = camera.confidence_permille;
     sample->seq = camera.seq;
     sample->k230_timestamp_ms = camera.k230_timestamp_ms;
@@ -27,6 +28,7 @@ void Camera_Init(void)
 {
     camera.pos_mm = 0;
     camera.vel_mm_s = 0;
+    camera.target_mm = 0;
     camera.confidence_permille = 0U;
     camera.seq = 0U;
     camera.k230_timestamp_ms = 0U;
@@ -71,6 +73,7 @@ void Camera_RxIsr(uint8_t byte)
     camera.valid = frame.valid;
     camera.pos_mm = frame.valid ? frame.pos_mm : 0;
     camera.vel_mm_s = frame.valid ? frame.vel_mm_s : 0;
+    camera.target_mm = frame.target_mm;
     camera.confidence_permille = frame.valid ? frame.confidence_permille : 0U;
     camera.last_rx_ms = HAL_GetTick();
     camera.frames_ok++;

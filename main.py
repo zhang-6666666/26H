@@ -5,7 +5,7 @@ reference project.  It is intentionally a single file so it can be copied to
 ``/sdcard/main.py`` and run at power-on.
 
 UART1 output (115200-8-N-1, ASCII):
-    $B,seq,t_ms,valid,x_mm,v_mm_s,confidence*CS\r\n
+    $B,seq,t_ms,valid,x_mm,v_mm_s,confidence,target_mm*CS\r\n
 
 ``CS`` is the two-digit XOR of the characters between ``$`` and ``*``.
 ``valid=0`` is sent whenever the ball is not reliable; the controller must
@@ -31,20 +31,21 @@ except ImportError:  # Allows recorded-video validation on a desktop.
 # Installation configuration
 # ---------------------------------------------------------------------------
 
-BUILD_ID = "k230mini-ball-v1.1.0-20260731"
+BUILD_ID = "k230mini-ball-v1.4.0-20260801"
 
 # The K230/K230 mini on-board camera is connected to CSI2 (id=2).
 CAMERA_ID = 2
 SENSOR_WIDTH = 1280
-SENSOR_HEIGHT = 720
+SENSOR_HEIGHT = 960
 FRAME_WIDTH = 640
-FRAME_HEIGHT = 360
+FRAME_HEIGHT = 480
 CAMERA_FPS = 30
 
-# Reference ROI (50, 410, 1840, 270) scaled from 1920 x 1080 to 640 x 360.
+# The previous 640 x 360 ROI (0, 157, 639, 70) is scaled vertically to the
+# 640 x 480 image.  Fine-tune it on the real mechanism after installation.
 # Before closed-loop operation, make its left and right borders coincide with
 # the two physical position references and adjust y/height around the pipe.
-ROI = (0, 157, 639, 70)  # x, y, width, height
+ROI = (0, 229, 639, 53)  # x, y, width, height
 PIPE_LENGTH_CM = 25.0
 
 # "green", "white", or "auto".  Select a fixed mode after commissioning for
@@ -55,9 +56,15 @@ PIPE_MODE = "auto"
 # change only this flag.  Positive position is normally toward image right.
 POSITION_REVERSED = False
 
-# IDE preview is useful for commissioning.  Disable it for the final controller
-# to reduce processing jitter.
+# 01Studio 2.4-inch MIPI display (640 x 480).  IDE mirroring and full-rate LCD
+# refresh are unnecessary during closed-loop operation and consume bandwidth.
 ENABLE_DISPLAY = True
+ENABLE_IDE_MIRROR = False
+DISPLAY_EVERY_N_FRAMES = 2
+
+# K230 mini on-board programmable KEY: GPIO21, active low.
+ONBOARD_KEY_PIN = 21
+KEY_DEBOUNCE_MS = 25
 
 # K230 UART1: IO3=TX1, IO4=RX1.  Only TX1 and GND are required when the
 # STM32 does not send commands back to the K230.
@@ -93,6 +100,13 @@ OBSERVER_ALPHA = 0.55
 OBSERVER_BETA = 0.12
 OBSERVER_ACCEL_NEW_WEIGHT = 0.20
 OBSERVER_RESET_MS = 200
+
+# Key task: press the on-board KEY, go to +5 cm, then command -5 cm and
+# keep holding it.  A single valid frame at/over the threshold triggers the
+# reversal; no acceleration estimate is used.
+TASK_POSITIVE_CM = 5.0
+TASK_NEGATIVE_CM = -5.0
+TASK_ARRIVAL_TOLERANCE_CM = 0.3
 
 
 _HSV_GREEN_LO = np.array([30, 55, 35], dtype=np.uint8)
@@ -167,7 +181,7 @@ def _xor_checksum(payload):
     return checksum
 
 
-def make_uart_frame(seq, timestamp_ms, result):
+def make_uart_frame(seq, timestamp_ms, result, target_cm=0.0):
     """Build one checksummed measurement frame."""
     if result is None:
         valid = 0
@@ -182,15 +196,90 @@ def make_uart_frame(seq, timestamp_ms, result):
         x_mm = int(_clamp(x_mm, -32768, 32767))
         velocity_mm_s = int(_clamp(velocity_mm_s, -32768, 32767))
 
-    payload = "B,%u,%u,%u,%d,%d,%u" % (
+    target_mm = int(round(_clamp(target_cm * 10.0, -125.0, 125.0)))
+    payload = "B,%u,%u,%u,%d,%d,%u,%d" % (
         seq & 0xFFFF,
         timestamp_ms & 0xFFFFFFFF,
         valid,
         x_mm,
         velocity_mm_s,
         confidence,
+        target_mm,
     )
     return "$%s*%02X\r\n" % (payload, _xor_checksum(payload))
+
+
+class ActiveLowKeyDebouncer:
+    """Non-blocking debounce filter for the on-board active-low key."""
+
+    def __init__(self, debounce_ms=KEY_DEBOUNCE_MS):
+        self.debounce_ms = debounce_ms
+        self._raw_pressed = False
+        self._stable_pressed = False
+        self._raw_changed_ms = 0
+
+    def update(self, pin_level, now_ms):
+        raw_pressed = pin_level == 0
+        if raw_pressed != self._raw_pressed:
+            self._raw_pressed = raw_pressed
+            self._raw_changed_ms = now_ms
+
+        if (
+            self._raw_pressed != self._stable_pressed
+            and _ticks_diff(now_ms, self._raw_changed_ms) >= self.debounce_ms
+        ):
+            self._stable_pressed = self._raw_pressed
+
+        return self._stable_pressed
+
+
+class BallMission:
+    """On-board-key-triggered +5 cm -> -5 cm task state machine."""
+
+    IDLE = 0
+    GO_POSITIVE = 1
+    GO_NEGATIVE = 2
+    HOLD_NEGATIVE = 3
+    _NAMES = ("IDLE", "GO +5", "RETURN -5", "HOLD -5")
+
+    def __init__(self):
+        self.state = self.IDLE
+        self.target_cm = 0.0
+        self._button_down = False
+
+    def handle_button(self, button_down):
+        """Start/restart only on the button's released-to-pressed edge."""
+        pressed = bool(button_down) and not self._button_down
+        self._button_down = bool(button_down)
+        if pressed:
+            self.state = self.GO_POSITIVE
+            self.target_cm = TASK_POSITIVE_CM
+        return pressed
+
+    def update_detection(self, result):
+        """Advance the task from a valid estimated ball position."""
+        if result is None:
+            return False
+
+        x_cm = result["x_est_cm"]
+        if (
+            self.state == self.GO_POSITIVE
+            and x_cm >= TASK_POSITIVE_CM - TASK_ARRIVAL_TOLERANCE_CM
+        ):
+            self.state = self.GO_NEGATIVE
+            self.target_cm = TASK_NEGATIVE_CM
+            return True
+
+        if (
+            self.state == self.GO_NEGATIVE
+            and x_cm <= TASK_NEGATIVE_CM + TASK_ARRIVAL_TOLERANCE_CM
+        ):
+            self.state = self.HOLD_NEGATIVE
+            return True
+        return False
+
+    def state_name(self):
+        return self._NAMES[self.state]
 
 
 class AlphaBetaObserver:
@@ -596,7 +685,7 @@ class SteelBallDetector:
         }, debug
 
 
-def annotate(frame, detector, result, debug, fps):
+def annotate(frame, detector, result, debug, fps, mission):
     rx, ry, rw, rh = detector.roi
     cv2.rectangle(frame, (rx, ry), (rx + rw - 1, ry + rh - 1), (255, 120, 0), 2)
 
@@ -634,6 +723,32 @@ def annotate(frame, detector, result, debug, fps):
         0.55,
         color,
         2,
+        cv2.LINE_AA,
+    )
+    task_label = "%s  target=%+.1fcm" % (
+        mission.state_name(),
+        mission.target_cm,
+    )
+    cv2.putText(
+        frame,
+        task_label,
+        (12, 52),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.48,
+        (0, 220, 255),
+        1,
+        cv2.LINE_AA,
+    )
+
+    key_text = "KEY21: START" if mission.state == mission.IDLE else "KEY21: RESTART"
+    cv2.putText(
+        frame,
+        key_text,
+        (500, 24),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.38,
+        (0, 220, 255),
+        1,
         cv2.LINE_AA,
     )
     debug_label = "mode=%s cand=%d G=%.0f%% W=%.0f%% miss=%d" % (
@@ -682,6 +797,14 @@ def init_uart():
     )
 
 
+def init_onboard_key():
+    from machine import FPIOA, Pin
+
+    fpioa = FPIOA()
+    fpioa.set_function(ONBOARD_KEY_PIN, FPIOA.GPIO21)
+    return Pin(ONBOARD_KEY_PIN, Pin.IN, Pin.PULL_UP)
+
+
 def main():
     from media.display import Display
     from media.media import MediaManager
@@ -689,10 +812,13 @@ def main():
 
     sensor = None
     uart = None
+    onboard_key = None
     display_started = False
     media_started = False
     detector = SteelBallDetector(ROI, PIPE_LENGTH_CM)
     observer = AlphaBetaObserver()
+    mission = BallMission()
+    key_debouncer = ActiveLowKeyDebouncer()
     seq = 0
 
     try:
@@ -710,16 +836,17 @@ def main():
 
         if ENABLE_DISPLAY:
             Display.init(
-                Display.VIRT,
-                sensor.width(),
-                sensor.height(),
-                to_ide=True,
+                Display.ST7701,
+                width=FRAME_WIDTH,
+                height=FRAME_HEIGHT,
+                to_ide=ENABLE_IDE_MIRROR,
             )
             display_started = True
 
         MediaManager.init()
         media_started = True
         uart = init_uart()
+        onboard_key = init_onboard_key()
         sensor.run()
 
         fps_value = 0.0
@@ -727,7 +854,7 @@ def main():
         fps_start_ms = _ticks_ms()
         print("K230 mini steel-ball detector: %s" % BUILD_ID)
         print(
-            "camera=CSI%d frame=%dx%d roi=%s pipe=%s uart=%s"
+            "camera=CSI%d frame=%dx%d roi=%s pipe=%s uart=%s key=GPIO%d"
             % (
                 CAMERA_ID,
                 FRAME_WIDTH,
@@ -735,6 +862,7 @@ def main():
                 str(ROI),
                 PIPE_MODE,
                 "UART%d" % UART_PORT if ENABLE_UART else "off",
+                ONBOARD_KEY_PIN,
             )
         )
 
@@ -743,6 +871,11 @@ def main():
             image = sensor.snapshot()
             frame = image.to_numpy_ref()
             now_ms = _ticks_ms()
+
+            if onboard_key is not None:
+                key_pressed = key_debouncer.update(onboard_key.value(), now_ms)
+                if mission.handle_button(key_pressed):
+                    print("task start: target=+%.1fcm" % TASK_POSITIVE_CM)
 
             fps_frames += 1
             fps_elapsed_ms = _ticks_diff(now_ms, fps_start_ms)
@@ -768,12 +901,20 @@ def main():
                 detection["acceleration_cm_s2"] = acceleration
                 result = detection
 
-            if uart is not None:
-                uart.write(make_uart_frame(seq, now_ms, result))
+            if mission.update_detection(result):
+                print(
+                    "task state=%s target=%+.1fcm"
+                    % (mission.state_name(), mission.target_cm)
+                )
 
-            if ENABLE_DISPLAY:
-                annotate(frame, detector, result, debug, fps_value)
-                Display.show_image(image)
+            if uart is not None:
+                uart.write(
+                    make_uart_frame(seq, now_ms, result, mission.target_cm)
+                )
+
+            if ENABLE_DISPLAY and seq % DISPLAY_EVERY_N_FRAMES == 0:
+                annotate(frame, detector, result, debug, fps_value, mission)
+                Display.show_image(image, x=0, y=0)
 
             if seq % 15 == 0:
                 if result is None:
